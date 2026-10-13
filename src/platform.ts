@@ -321,24 +321,34 @@ if (type === 'VIRTUAL_IP_DEVICE') {
         `${statusPrefix}/scenes/+/tx`,
       ];
 
-      for (const topic of topics) {
-        this.mqttClient?.subscribe(topic, err => {
-          if (err) {
-            this.log.error(`Subscribe mislukt: ${topic}`);
-          } else {
-            this.log.info(`Subscribed: ${topic}`);
-          }
-        });
-      }
+      // Eerst alle MQTT-abonnementen bevestigen.
+      this.mqttClient?.subscribe(topics, { qos: 0 }, (err, granted) => {
+        if (err || !granted ||
+            granted.length !== topics.length ||
+            granted.some(item => item.qos === 128)) {
+          this.log.error(
+            `MQTT subscriptions mislukt: ${err?.message ?? 'onvolledig'}`,
+          );
+          return;
+        }
 
-      const syncTopic = `${commandPrefix}/system/rx`;
+        this.log.info('MQTT status topics geactiveerd');
 
-      this.mqttClient?.publish(
-        syncTopic,
-        JSON.stringify({ action: 'SYNC' }),
-      );
+        const syncTopic = `${commandPrefix}/system/rx`;
 
-      this.log.info(`SYNC verstuurd naar ${syncTopic}`);
+        this.mqttClient?.publish(
+          syncTopic,
+          JSON.stringify({ action: 'SYNC' }),
+          { qos: 0, retain: false },
+          error => {
+            if (error) {
+              this.log.error(`SYNC mislukt: ${error.message}`);
+            } else {
+              this.log.info(`SYNC verstuurd naar ${syncTopic}`);
+            }
+          },
+        );
+      });
     });
 
 
@@ -385,6 +395,18 @@ this.mqttClient.on('message', (topic, payload) => {
     this.log.warn(`Ongeldige JSON ontvangen op ${topic}`);
   }
 });
+
+    this.mqttClient.on('offline', () => {
+      this.log.warn('MQTT verbinding verloren');
+    });
+
+    this.mqttClient.on('reconnect', () => {
+      this.log.info('MQTT probeert opnieuw te verbinden');
+    });
+
+    this.mqttClient.on('close', () => {
+      this.log.warn('MQTT verbinding gesloten');
+    });
 
     this.mqttClient.on('error', error => {
       this.log.error(`MQTT fout: ${error.message}`);
