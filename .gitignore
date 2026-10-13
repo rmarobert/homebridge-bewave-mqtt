@@ -1,0 +1,18 @@
+node_modules/
+*.log
+*.backup
+*.bak
+config.json
+.env
+.DS_Store
+
+# Gegenereerde bestanden
+dist/
+
+# Tijdelijke back-ups
+*.bak.*
+
+# Lokale configuratie
+.env.*
+!.env.example
+*.bak[0-9]*

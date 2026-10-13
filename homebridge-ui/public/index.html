@@ -1,0 +1,841 @@
+
+<style>
+.bw-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.bw-searchbar input { flex: 1; min-width: 0; }
+#deviceCount { white-space: nowrap; color: #999; }
+
+.bw-device {
+  border: 1px solid #666;
+  border-radius: 8px;
+  margin-bottom: 7px;
+  overflow: hidden;
+}
+.bw-device-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 15px;
+  cursor: pointer;
+}
+.bw-device-summary:hover {
+  background: rgba(128,128,128,.12);
+}
+.bw-device-summary::marker {
+  color: #999;
+}
+.bw-device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.bw-device-info small {
+  color: #aaa;
+  font-size: 12px;
+}
+.bw-status {
+  border-radius: 15px;
+  padding: 4px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.bw-registered {
+  color: #68d69a;
+  background: rgba(40,167,100,.13);
+}
+.bw-unregistered {
+  color: #ccc;
+  background: rgba(128,128,128,.18);
+}
+.bw-device-editor {
+  padding: 15px;
+  border-top: 1px solid #555;
+}
+.bw-device-editor label {
+  display: block;
+  margin-bottom: 7px;
+}
+.bw-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+}
+.bw-explanation {
+  display: block;
+  color: #aaa;
+  margin-top: 6px;
+}
+</style>
+<div class="container-fluid">
+  <h2>SATEL BE WAVE MQTT</h2>
+  <p class="text-muted">
+    Configuratie en beheer van de BE WAVE HomeKit-integratie
+  </p>
+
+  <div class="card mt-4">
+    <div class="card-body">
+      <h5>MQTT-verbinding</h5>
+
+      <div class="mb-3">
+        <label class="form-label">Broker URL</label>
+        <input id="brokerUrl" class="form-control" readonly>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Gebruikersnaam</label>
+        <input id="username" class="form-control" readonly>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Status topic</label>
+        <input id="statusPrefix" class="form-control" readonly>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Command topic</label>
+        <input id="commandPrefix" class="form-control" readonly>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <h5>HomeKit-functionaliteit</h5>
+      <div id="features">Configuratie laden...</div>
+    </div>
+  </div>
+
+  <p id="status" class="mt-3 text-muted">
+    Verbinding met Homebridge controleren...
+  </p>
+</div>
+
+<script>
+(async () => {
+  const status = document.getElementById('status');
+
+  try {
+    const configs = await homebridge.getPluginConfig();
+    const config = configs.find(
+      item => item.platform === 'BeWaveMQTT'
+    );
+
+    if (!config) {
+      status.textContent = 'Geen BE WAVE-configuratie gevonden.';
+      return;
+    }
+
+    document.getElementById('brokerUrl').value =
+      config.brokerUrl || '';
+
+    document.getElementById('username').value =
+      config.username || '';
+
+    document.getElementById('statusPrefix').value =
+      config.statusPrefix ?? 'bewave/status';
+
+    document.getElementById('commandPrefix').value =
+      config.commandPrefix ?? 'bewave/command';
+
+    const features = [
+      ['Scènes', config.includeScenes ?? false],
+      ['Virtuele apparaten', config.includeVirtualDevices ?? true],
+      ['Beveiligingssysteem', config.includeSecuritySystem ?? true],
+    ];
+
+    const container = document.getElementById('features');
+    container.replaceChildren();
+
+    for (const [name, enabled] of features) {
+      const row = document.createElement('p');
+      row.textContent = name + ': ' +
+        (enabled ? 'Ingeschakeld' : 'Uitgeschakeld');
+      container.appendChild(row);
+    }
+
+    status.textContent = 'Configuratie succesvol ingelezen.';
+
+  } catch (error) {
+    status.textContent =
+      'Fout bij laden configuratie: ' + error.message;
+  }
+})();
+</script>
+
+<hr class="mt-4">
+
+<h3>BE WAVE apparaten</h3>
+<p>Ontdek apparaten en alarmgroepen via MQTT.</p>
+
+<button id="syncButton" class="btn btn-success ml-2"
+        type="button">
+  Be Wave apparaten zoeken
+</button>
+
+<p id="discoveryStatus" class="mt-3"></p>
+
+<h4 class="mt-4">Apparaten</h4>
+<button id="saveDevicesButton"
+        class="btn btn-primary mt-3 mb-2"
+        type="button" disabled>
+  Apparaatinstellingen opslaan
+</button>
+<p id="saveDevicesStatus" class="small text-muted"></p>
+
+<div class="bw-searchbar">
+  <input id="deviceSearch"
+         class="form-control"
+         type="search"
+         placeholder="Zoek apparaat, index of type...">
+  <span id="deviceCount"></span>
+</div>
+<div id="deviceResults">
+  Nog geen apparaten gezocht.
+</div>
+
+<h4 class="mt-4">Alarmgroepen</h4>
+
+<div class="card p-3 mb-3">
+  <h4>Beveiliging configureren</h4>
+  <p class="text-muted">
+    Koppel een BE WAVE-alarmgroep aan iedere HomeKit-modus.
+  </p>
+
+  <div class="mb-3">
+    <label for="alarmStay">Thuis</label>
+    <select id="alarmStay" class="form-control"></select>
+  </div>
+
+  <div class="mb-3">
+    <label for="alarmAway">Weg</label>
+    <select id="alarmAway" class="form-control"></select>
+  </div>
+
+  <div class="mb-3">
+    <label for="alarmNight">Nacht</label>
+    <select id="alarmNight" class="form-control"></select>
+  </div>
+
+  <button id="saveAlarmMapping"
+          class="btn btn-primary"
+          type="button"
+          disabled>
+    Beveiligingsinstellingen opslaan
+  </button>
+
+  <p id="alarmSaveStatus" class="mt-3"></p>
+</div>
+<div id="alarmResults">
+  Nog geen alarmgroepen gezocht.
+</div>
+
+<script>
+document.getElementById('syncButton')
+  .addEventListener('click', () => runDiscovery(true));
+
+async function runDiscovery(sendSync) {
+    const button = document.getElementById('syncButton');
+    const status = document.getElementById('discoveryStatus');
+    const deviceResults = document.getElementById('deviceResults');
+    const alarmResults = document.getElementById('alarmResults');
+
+    button.disabled = true;
+
+    status.textContent = 'Be Wave apparaten zoeken (maximaal 8 seconden)...';
+
+    try {
+      const configs = await homebridge.getPluginConfig();
+      const config = configs.find(
+        item => item.platform === 'BeWaveMQTT'
+      );
+
+      if (!config) {
+        throw new Error('Geen BE WAVE-configuratie gevonden');
+      }
+
+      const result = await homebridge.request(
+        sendSync ? '/sync' : '/discover',
+        config
+      );
+
+      status.textContent = result.connected
+        ? 'MQTT verbonden. Zoekactie afgerond.'
+        : 'MQTT niet verbonden.';
+
+      const devices = result.devices || [];
+      const alarms = result.alarms || [];
+
+      deviceResults.replaceChildren();
+      alarmResults.replaceChildren();
+
+      function addRow(container, title, detail) {
+        const row = document.createElement('div');
+        row.className = 'border rounded p-2 mb-2';
+
+        const heading = document.createElement('strong');
+        heading.textContent = title;
+
+        const description = document.createElement('div');
+        description.className = 'text-muted small';
+        description.textContent = detail;
+
+        row.append(heading, description);
+        container.appendChild(row);
+      }
+
+      if (!devices.length) {
+        deviceResults.textContent =
+          'Geen apparaten ontvangen tijdens de zoekactie.';
+      }
+
+      // Bestaande registraties ophalen uit Homebridge-cache
+      let registeredDevices = [];
+      let registrationAvailable = false;
+
+      try {
+        registeredDevices = await homebridge.request(
+          '/registered-devices'
+        );
+        registrationAvailable = true;
+      } catch (error) {
+        console.warn('Registratiestatus niet beschikbaar:', error);
+      }
+
+      const registeredIds = new Set(
+        registeredDevices.map(device => String(device.id))
+      );
+
+      const configuredDevices = config.devices || [];
+      document.getElementById('saveDevicesButton').disabled =
+        devices.length === 0;
+
+
+      const supportedTypes = new Set([
+        'ASW_210', 'ADC_200', 'APD_200',
+        'APCAM_200', 'ATPH_200', 'AXD_200L',
+        'AXD_200', 'SLIM_PIR_LUNA_PET_BUS',
+        'ART_210', 'ACMD_200', 'ASW_200_E',
+        'ASD_200', 'VIRTUAL_OUTPUT_DEVICE',
+        'VIRTUAL_IP_DEVICE'
+      ]);
+
+      devices
+        .sort((a, b) => a.id - b.id)
+        .forEach(device => {
+          const saved = configuredDevices.find(
+            d => String(d.id) === String(device.id)
+          );
+
+          const registered = registeredIds.has(String(device.id));
+          const supported = supportedTypes.has(device.type);
+          const displayName = saved?.name || device.name;
+
+          const card = document.createElement('details');
+          card.className = 'bw-device';
+          card.dataset.searchText = [
+            displayName,
+            device.name,
+            device.id,
+            device.type
+          ].join(' ').toLowerCase();
+
+          const summary = document.createElement('summary');
+          summary.className = 'bw-device-summary';
+
+          const info = document.createElement('span');
+          info.className = 'bw-device-info';
+
+          const title = document.createElement('strong');
+          title.textContent = displayName;
+
+          const details = document.createElement('small');
+          details.textContent =
+            `#${device.id} · ${device.type}`;
+
+          info.append(title, details);
+
+          const badge = document.createElement('span');
+          badge.className = registered
+            ? 'bw-status bw-registered'
+            : 'bw-status bw-unregistered';
+
+          badge.textContent = !registrationAvailable
+            ? 'Onbekend'
+            : registered
+              ? 'Geregistreerd'
+              : !supported
+                ? 'Niet ondersteund'
+                : 'Niet toegevoegd';
+
+          summary.append(info, badge);
+
+          const editor = document.createElement('div');
+          editor.className = 'bw-device-editor';
+
+          const label = document.createElement('label');
+          label.textContent = 'Naam in HomeKit';
+
+          const nameInput = document.createElement('input');
+          nameInput.type = 'text';
+          nameInput.className = 'form-control';
+          nameInput.value = displayName;
+          nameInput.dataset.deviceId = String(device.id);
+
+          const toggleLabel = document.createElement('label');
+          toggleLabel.className = 'bw-checkbox';
+
+          const toggle = document.createElement('input');
+          toggle.type = 'checkbox';
+          // Registratie bepaalt de beginstand.
+          toggle.checked = registered;
+          toggle.disabled =
+            registered || !supported || !registrationAvailable;
+
+          toggle.dataset.deviceId = String(device.id);
+          toggle.dataset.registered = String(registered);
+          toggle.dataset.supported = String(supported);
+
+          const toggleText = document.createElement('span');
+          toggleText.textContent = 'Gebruiken in HomeKit';
+
+          toggleLabel.append(toggle, toggleText);
+
+          const explanation = document.createElement('small');
+          explanation.className = 'bw-explanation';
+          explanation.textContent = registered
+            ? 'Dit apparaat is geregistreerd. Verwijderen kan ' +
+              'via Homebridge bij de individuele accessoires.'
+            : !supported
+              ? 'Dit apparaattype wordt nog niet ondersteund ' +
+                'door de Homebridge BE WAVE-plugin.'
+              : 'Vink aan en sla de instellingen op om dit ' +
+                'apparaat na een Homebridge-herstart toe te voegen.';
+
+          editor.append(
+            label,
+            nameInput,
+            toggleLabel,
+            explanation
+          );
+
+          if (registered) {
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'btn btn-outline-danger mt-3';
+            removeButton.textContent = 'Verwijdering voorbereiden';
+
+            const removeStatus = document.createElement('p');
+            removeStatus.className = 'small mt-2';
+
+            removeButton.addEventListener('click', async () => {
+              if (removeButton.dataset.confirmed !== 'true') {
+                removeButton.dataset.confirmed = 'true';
+                removeButton.textContent = 'Bevestigen';
+
+                removeStatus.textContent =
+                  'Let op: hiermee schakel je automatisch opnieuw ' +
+                  'toevoegen uit voor ' + displayName + '. ' +
+                  'Het bestaande accessoire blijft aanwezig. ' +
+                  'Klik nogmaals op Bevestigen om door te gaan.';
+
+                removeStatus.style.color = '#e5a44d';
+
+                const cancelButton = document.createElement('button');
+                cancelButton.type = 'button';
+                cancelButton.className = 'btn btn-secondary mt-2 ml-2';
+                cancelButton.textContent = 'Annuleren';
+
+                cancelButton.addEventListener('click', () => {
+                  removeButton.dataset.confirmed = 'false';
+                  removeButton.textContent = 'Verwijdering voorbereiden';
+                  removeStatus.textContent = '';
+                  cancelButton.remove();
+                });
+
+                removeStatus.after(cancelButton);
+                return;
+              }
+
+              removeButton.disabled = true;
+
+              try {
+                const configs = await homebridge.getPluginConfig();
+                const index = configs.findIndex(
+                  item => item.platform === 'BeWaveMQTT'
+                );
+
+                if (index === -1) {
+                  throw new Error('BE WAVE-configuratie ontbreekt');
+                }
+
+                const config = {...configs[index]};
+                const devices = Array.isArray(config.devices)
+                  ? config.devices.map(d => ({...d}))
+                  : [];
+
+                const existing = devices.findIndex(
+                  d => String(d.id) === String(device.id)
+                );
+
+                const updated = {
+                  ...(existing >= 0 ? devices[existing] : {}),
+                  id: Number(device.id),
+                  name: nameInput.value.trim() || displayName,
+                  enabled: false
+                };
+
+                if (existing >= 0) {
+                  devices[existing] = updated;
+                } else {
+                  devices.push(updated);
+                }
+
+                config.devices = devices;
+                configs[index] = config;
+
+                await homebridge.updatePluginConfig(configs);
+                await homebridge.savePluginConfig();
+
+                removeStatus.textContent =
+                  'Automatisch toevoegen uitgeschakeld. ' +
+                  'Verwijder het accessoire nu via Homebridge.';
+
+                removeButton.textContent = 'Verwijdering voorbereid';
+
+              } catch (error) {
+                removeStatus.textContent =
+                  'Fout: ' + error.message;
+                removeButton.disabled = false;
+              }
+            });
+
+            editor.append(removeButton, removeStatus);
+          }
+
+          card.append(summary, editor);
+          deviceResults.appendChild(card);
+        });
+
+      filterBeWaveDevices();
+      if (!alarms.length) {
+        alarmResults.textContent =
+          'Geen alarmgroepen ontvangen tijdens de zoekactie.';
+      }
+
+      alarms.forEach(alarm => {
+        const displayName = alarm.name === 'FULLARM'
+          ? 'Volledig Beveiligen'
+          : alarm.name;
+
+        addRow(
+          alarmResults,
+          displayName,
+          `MQTT: ${alarm.topicName} | Status: ${alarm.armingStatus}`
+        );
+      });
+
+      await loadAlarmMapping(alarms);
+
+      status.textContent +=
+        ` ${devices.length} apparaten en ${alarms.length} alarmgroepen gevonden.`;
+
+    } catch (error) {
+      status.textContent = 'Fout: ' + error.message;
+    } finally {
+      button.disabled = false;
+
+    }
+}
+
+// ========================================
+// APPARAATCONFIGURATIE OPSLAAN
+// ========================================
+
+document.getElementById('saveDevicesButton')
+  .addEventListener('click', async () => {
+
+    const button =
+      document.getElementById('saveDevicesButton');
+
+    const status =
+      document.getElementById('saveDevicesStatus');
+
+    button.disabled = true;
+    status.textContent = 'Instellingen controleren...';
+
+    try {
+      const configBlocks =
+        await homebridge.getPluginConfig();
+
+      const platformIndex = configBlocks.findIndex(
+        item => item.platform === 'BeWaveMQTT'
+      );
+
+      if (platformIndex === -1) {
+        throw new Error('BE WAVE-configuratie ontbreekt');
+      }
+
+      // Bestaande configuratie behouden
+      const config = {
+        ...configBlocks[platformIndex]
+      };
+
+      const devices = Array.isArray(config.devices)
+        ? config.devices.map(item => ({...item}))
+        : [];
+
+      const cards = document.querySelectorAll(
+        '#deviceResults input[type="text"][data-device-id]'
+      );
+
+      if (!cards.length) {
+        throw new Error('Geen apparaten om op te slaan');
+      }
+
+      for (const input of cards) {
+        const id = Number(input.dataset.deviceId);
+        const name = input.value.trim();
+
+        if (!Number.isSafeInteger(id) || id < 0) {
+          throw new Error('Ongeldige apparaatindex');
+        }
+
+        if (!name) {
+          throw new Error(
+            'Apparaat ' + id + ' heeft geen naam'
+          );
+        }
+
+        const checkbox = Array.from(
+          document.querySelectorAll(
+            '#deviceResults input[type="checkbox"][data-device-id]'
+          )
+        ).find(item =>
+          item.dataset.deviceId === String(id)
+        );
+
+        if (!checkbox) {
+          throw new Error(
+            'HomeKit-selectie ontbreekt voor apparaat ' + id
+          );
+        }
+
+        const existing = devices.findIndex(
+          item => String(item.id) === String(id)
+        );
+
+        const previous =
+          existing >= 0 ? devices[existing] : {};
+
+        // Bestaande Homebridge-registraties behouden.
+        // Alleen nieuwe apparaten expliciet selecteren.
+        const registered =
+          checkbox.dataset.registered === 'true';
+        const supported =
+          checkbox.dataset.supported === 'true';
+
+        const updated = {
+          ...previous,
+          id,
+          name
+        };
+
+        if (!registered && supported) {
+          updated.enabled = checkbox.checked;
+        }
+
+        if (existing >= 0) {
+          devices[existing] = updated;
+        } else {
+          devices.push(updated);
+        }
+      }
+
+      config.devices = devices;
+
+      // Alle overige configuratieblokken behouden
+      configBlocks[platformIndex] = config;
+
+      await homebridge.updatePluginConfig(configBlocks);
+      await homebridge.savePluginConfig();
+
+      status.textContent =
+        '✓ Apparaatinstellingen succesvol opgeslagen. ' +
+        'Herstart Homebridge om wijzigingen toe te passen.';
+
+      status.style.color = '#48c78e';
+      status.style.fontWeight = 'bold';
+
+      button.textContent = '✓ OPGESLAGEN';
+
+    } catch (error) {
+      status.textContent =
+        'Opslaan mislukt: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+
+function filterBeWaveDevices() {
+  const search = document.getElementById('deviceSearch');
+  const count = document.getElementById('deviceCount');
+  const query = search.value.trim().toLowerCase();
+  const cards = document.querySelectorAll('#deviceResults .bw-device');
+
+  let visible = 0;
+
+  cards.forEach(card => {
+    const matches = card.dataset.searchText.includes(query);
+    card.hidden = !matches;
+    card.style.display = matches ? '' : 'none';
+    if (matches) visible++;
+  });
+
+  count.textContent = `${visible} / ${cards.length}`;
+}
+
+document.getElementById('deviceSearch')
+  .addEventListener('input', filterBeWaveDevices);
+
+
+// ========================================
+// BEVEILIGINGSCONFIGURATIE
+// ========================================
+
+let discoveredAlarmNames = [];
+
+async function loadAlarmMapping(alarms) {
+  const configs = await homebridge.getPluginConfig();
+  const config = configs.find(
+    item => item.platform === 'BeWaveMQTT'
+  );
+
+  if (!config) {
+    throw new Error('BE WAVE-configuratie ontbreekt');
+  }
+
+  const mapping = config.alarm?.mapping || {};
+
+  // alarm.ts gebruikt de groepsnaam als interne mapping.
+  const names = [...new Set(
+    alarms.map(a => a.name)
+  )];
+
+  discoveredAlarmNames = names;
+
+  const modes = {
+    stay: 'alarmStay',
+    away: 'alarmAway',
+    night: 'alarmNight'
+  };
+
+  for (const [mode, elementId] of Object.entries(modes)) {
+    const select = document.getElementById(elementId);
+    select.replaceChildren();
+
+    const options = ['', ...names];
+
+    // Bestaande mapping ook tonen als groep niet ontdekt is.
+    if (mapping[mode] && !options.includes(mapping[mode])) {
+      options.push(mapping[mode]);
+    }
+
+    for (const name of options) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = !name
+        ? 'Niet toegewezen'
+        : name === 'FULLARM'
+          ? 'Volledig Beveiligen'
+          : name;
+
+      if (name && !names.includes(name)) {
+        option.textContent += ' (niet ontdekt)';
+      }
+
+      select.appendChild(option);
+    }
+
+    select.value = mapping[mode] || '';
+  }
+
+  document.getElementById('saveAlarmMapping').disabled = false;
+}
+
+document.getElementById('saveAlarmMapping')
+  .addEventListener('click', async () => {
+    const button = document.getElementById('saveAlarmMapping');
+    const status = document.getElementById('alarmSaveStatus');
+
+    const mapping = {
+      stay: document.getElementById('alarmStay').value,
+      away: document.getElementById('alarmAway').value,
+      night: document.getElementById('alarmNight').value
+    };
+
+    // Voorkom onbedoeld dubbele toewijzingen.
+    const selected = Object.values(mapping).filter(Boolean);
+
+    if (new Set(selected).size !== selected.length) {
+      status.textContent =
+        'Kies verschillende alarmgroepen voor Thuis, Weg en Nacht.';
+      return;
+    }
+
+    if (selected.some(name => !discoveredAlarmNames.includes(name))) {
+      status.textContent =
+        'Een geselecteerde alarmgroep is niet ontdekt. ' +
+        'Synchroniseer opnieuw voordat je opslaat.';
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = 'Beveiligingsinstellingen opslaan...';
+
+    try {
+      const configs = await homebridge.getPluginConfig();
+      const index = configs.findIndex(
+        item => item.platform === 'BeWaveMQTT'
+      );
+
+      if (index === -1) {
+        throw new Error('BE WAVE-configuratie ontbreekt');
+      }
+
+      const previous = configs[index];
+
+      const cleanMapping = Object.fromEntries(
+        Object.entries(mapping).filter(([, value]) => value)
+      );
+
+      configs[index] = {
+        ...previous,
+        alarm: {
+          ...(previous.alarm || {}),
+          mapping: cleanMapping
+        }
+      };
+
+      // alarm.enabled, priority en overige instellingen behouden.
+      await homebridge.updatePluginConfig(configs);
+      await homebridge.savePluginConfig();
+
+      status.textContent =
+        'Beveiligingsinstellingen opgeslagen. ' +
+        'Herstart Homebridge om ze toe te passen.';
+    } catch (error) {
+      status.textContent = 'Opslaan mislukt: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+</script>

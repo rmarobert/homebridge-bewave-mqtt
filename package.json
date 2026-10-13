@@ -1,0 +1,41 @@
+{
+  "name": "homebridge-bewave-mqtt",
+  "version": "0.1.0",
+  "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
+  "main": "dist/index.js",
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "homekit",
+    "bewave",
+    "mqtt",
+    "satel"
+  ],
+  "license": "MIT",
+  "engines": {
+    "homebridge": ">=1.6.0",
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "homebridge": "^1.6.0"
+  },
+  "dependencies": {
+    "@homebridge/plugin-ui-utils": "^2.2.6",
+    "mqtt": "^5.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build": "tsc && rm -rf dist/homebridge-ui && cp -R homebridge-ui dist/homebridge-ui"
+  },
+  "homebridge": {
+    "platforms": [
+      {
+        "name": "Be Wave MQTT",
+        "platform": "BeWaveMQTT"
+      }
+    ]
+  }
+}
