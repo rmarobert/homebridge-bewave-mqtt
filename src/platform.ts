@@ -312,6 +312,8 @@ if (type === 'VIRTUAL_IP_DEVICE') {
     });
 
     this.mqttClient.on('connect', () => {
+      // Oude alarmstatussen pas vertrouwen na nieuwe MQTT-berichten.
+      this.alarm.invalidateStatus();
       this.log.info('MQTT verbonden');
 
       const topics = [
@@ -398,6 +400,7 @@ this.mqttClient.on('message', (topic, payload) => {
 
     this.mqttClient.on('offline', () => {
       this.log.warn('MQTT verbinding verloren');
+      this.alarm.invalidateStatus();
     });
 
     this.mqttClient.on('reconnect', () => {
@@ -406,6 +409,7 @@ this.mqttClient.on('message', (topic, payload) => {
 
     this.mqttClient.on('close', () => {
       this.log.warn('MQTT verbinding gesloten');
+      this.alarm.invalidateStatus();
     });
 
     this.mqttClient.on('error', error => {

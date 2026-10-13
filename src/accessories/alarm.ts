@@ -25,6 +25,9 @@ export class BeWaveAlarm {
   private accessory?: PlatformAccessory;
   private commandPending = false;
 
+  // Alleen statusberichten uit de huidige MQTT-sessie vertrouwen.
+  private readonly freshGroups = new Set<string>();
+
   constructor(
     private readonly platform: BeWaveMqttPlatform,
   ) {}
@@ -69,6 +72,8 @@ export class BeWaveAlarm {
 
     const isNew = !this.groups.has(name);
 
+    this.freshGroups.add(name);
+
     this.groups.set(name, {
       name,
       topicName,
@@ -93,6 +98,12 @@ export class BeWaveAlarm {
 
   public getGroups(): DiscoveredAlarmGroup[] {
     return [...this.groups.values()];
+  }
+
+  // Aanroepen bij verbindingverlies en bij een nieuwe MQTT-sessie.
+  public invalidateStatus(): void {
+    this.freshGroups.clear();
+    this.updateHomeKit();
   }
 
   // ========================================
@@ -149,6 +160,14 @@ export class BeWaveAlarm {
     const service =
       this.accessory.getService(Service.SecuritySystem) ??
       this.accessory.addService(Service.SecuritySystem);
+
+    service
+      .getCharacteristic(Characteristic.StatusFault)
+      .onGet(() =>
+        this.resolveState() === undefined
+          ? Characteristic.StatusFault.GENERAL_FAULT
+          : Characteristic.StatusFault.NO_FAULT,
+      );
 
     service
       .getCharacteristic(Characteristic.SecuritySystemCurrentState)
@@ -229,7 +248,7 @@ export class BeWaveAlarm {
         ? this.groups.get(groupName)
         : undefined;
 
-      if (!group) {
+      if (!group || !this.freshGroups.has(group.name)) {
         throw new HapStatusError(-70402);
       }
 
@@ -259,6 +278,14 @@ export class BeWaveAlarm {
     // Controleer alle ontdekte groepen, ook de
     // groepen die niet aan HomeKit zijn gekoppeld.
     const all = this.getGroups();
+
+    // Geen uitschakelcommando op basis van oude groepsstatussen.
+    if (
+      !all.length ||
+      all.some(group => !this.freshGroups.has(group.name))
+    ) {
+      throw new HapStatusError(-70402);
+    }
 
     if (
       all.some(group =>
@@ -378,11 +405,19 @@ export class BeWaveAlarm {
   }
 
   private resolveState(): number | undefined {
+    if (!this.platform.mqttClient?.connected) {
+      return undefined;
+    }
+
     const mapped = this.mappedGroups();
 
     if (!mapped.length) return undefined;
 
-    if (mapped.some(name => !this.groups.has(name))) {
+    if (
+      mapped.some(name =>
+        !this.groups.has(name) || !this.freshGroups.has(name),
+      )
+    ) {
       return undefined;
     }
 
@@ -439,14 +474,21 @@ export class BeWaveAlarm {
 
     const state = this.resolveState();
 
-    if (state === undefined) return;
-
     const accessory = this.ensureAccessory();
     const { Service, Characteristic } = this.platform.api.hap;
 
     const service = accessory.getService(
       Service.SecuritySystem,
     )!;
+
+    service.updateCharacteristic(
+      Characteristic.StatusFault,
+      state === undefined
+        ? Characteristic.StatusFault.GENERAL_FAULT
+        : Characteristic.StatusFault.NO_FAULT,
+    );
+
+    if (state === undefined) return;
 
     service.updateCharacteristic(
       Characteristic.SecuritySystemCurrentState,
