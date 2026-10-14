@@ -28,7 +28,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "build": "tsc && rm -rf dist/homebridge-ui && cp -R homebridge-ui dist/homebridge-ui"
+    "build": "tsc && rm -rf dist/homebridge-ui && cp -R homebridge-ui dist/homebridge-ui && find dist/homebridge-ui -type f \\( -name \"*.bak\" -o -name \"*.bak2\" \\) -delete"
   },
   "homebridge": {
     "platforms": [
@@ -37,5 +37,10 @@
         "platform": "BeWaveMQTT"
       }
     ]
-  }
+  },
+  "files": [
+    "dist",
+    "config.schema.json",
+    "README.md"
+  ]
 }
