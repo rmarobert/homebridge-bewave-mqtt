@@ -1,6 +1,6 @@
 {
   "name": "homebridge-bewave-mqtt",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
   "main": "dist/index.js",
   "keywords": [
