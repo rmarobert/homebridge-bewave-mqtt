@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5] - 2026-10-17
+
+### Improved
+- Added `bewave/status` as the default MQTT status topic.
+- Added `bewave/command` as the default MQTT command topic.
+- Improved the first-time configuration experience.
+- Existing MQTT configurations remain unchanged.
+
 ## [1.0.4] - 2026-10-17
 
 ### Improved
