@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.6] - 2026-10-17
+
+### Fixed
+- Fixed Homebridge plugin verification requirements.
+- Added homepage and issue tracker URLs.
+- Added `supports-hap` transport declaration.
+- Corrected JSON Schema required properties.
+- Moved Homebridge from peerDependencies to devDependencies.
+
+### Changed
+- Improved package metadata for Homebridge verification.
+
+
 ## [1.0.5] - 2026-10-17
 
 ### Improved
