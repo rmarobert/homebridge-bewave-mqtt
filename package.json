@@ -1,7 +1,7 @@
 {
   "name": "homebridge-bewave-mqtt",
   "displayName": "SATEL BE WAVE - Apple HomeKit",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
   "main": "dist/index.js",
   "keywords": [
@@ -18,15 +18,13 @@
     "abax",
     "abax2",
     "alarm",
-    "smart home"
+    "smart home",
+    "supports-hap"
   ],
   "license": "MIT",
   "engines": {
     "homebridge": ">=1.6.0 <3.0.0",
     "node": ">=22.0.0"
-  },
-  "peerDependencies": {
-    "homebridge": "^1.6.0 || ^2.0.0"
   },
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^2.2.6",
@@ -34,6 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "homebridge": "^2.4.0",
     "typescript": "^5.0.0"
   },
   "scripts": {
@@ -51,5 +50,9 @@
     "dist",
     "config.schema.json",
     "README.md"
-  ]
+  ],
+  "homepage": "https://github.com/rmarobert/homebridge-bewave-mqtt",
+  "bugs": {
+    "url": "https://github.com/rmarobert/homebridge-bewave-mqtt/issues"
+  }
 }

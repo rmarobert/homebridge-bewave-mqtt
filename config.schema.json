@@ -13,54 +13,48 @@
         "type": "string",
         "default": "Be Wave MQTT"
       },
-
       "brokerUrl": {
         "title": "MQTT Broker URL",
         "type": "string",
-        "required": true,
         "placeholder": "mqtt://broker.local:1883"
       },
-
       "username": {
         "title": "MQTT gebruikersnaam",
         "type": "string"
       },
-
       "password": {
         "title": "MQTT wachtwoord",
         "type": "string",
         "format": "password"
       },
-
       "statusPrefix": {
         "title": "MQTT status topic",
         "type": "string",
         "default": "bewave/status"
       },
-
       "commandPrefix": {
         "title": "MQTT command topic",
         "type": "string",
         "default": "bewave/command"
       },
-
       "includeScenes": {
-        "title": "Be Wave scènes gebruiken in Apple Woning",
+        "title": "Be Wave sc\u00e8nes gebruiken in Apple Woning",
         "type": "boolean",
         "default": false
       },
-
       "includeVirtualDevices": {
         "title": "Virtuele Be Wave apparaten gebruiken in Apple Woning",
         "type": "boolean",
         "default": true
       },
-
       "includeSecuritySystem": {
         "title": "Be Wave beveiligingsopties gebruiken in Apple Woning",
         "type": "boolean",
         "default": true
       }
-    }
+    },
+    "required": [
+      "brokerUrl"
+    ]
   }
 }
