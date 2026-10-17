@@ -1,7 +1,7 @@
 {
   "name": "homebridge-bewave-mqtt",
   "displayName": "SATEL BE WAVE - Apple HomeKit",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
   "main": "dist/index.js",
   "keywords": [

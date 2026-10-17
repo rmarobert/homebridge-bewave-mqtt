@@ -137,10 +137,11 @@ This integration is intended for smart home convenience. Do not rely on Homebrid
 
 ## Compatibility
 
-Version 1.0.0 has been tested with:
+Development and testing have included:
 
 - Node.js 24.16.0
 - Homebridge 1.11.4
+- Homebridge 2.4.0 (installation and build compatibility)
 
 Compatibility with every supported operating system and Homebridge version has not been independently verified.
 
