@@ -1,10 +1,25 @@
 # Homebridge BE WAVE MQTT
 
-Bring your SATEL BE WAVE devices into Apple Home using Homebridge and MQTT.
+![SATEL BE WAVE – Apple HomeKit Integration](https://raw.githubusercontent.com/rmarobert/homebridge-bewave-mqtt/master/docs/image/bewave-homekit-banner.jpeg)
 
-This independent community plugin connects the SATEL BE WAVE security and smart home system to Apple HomeKit.
+## Full Control. Real-Time Response. Two-Way Integration.
 
-**Fast. Flexible. Easy to use.**
+**Bring the power of SATEL BE WAVE directly into Apple Home.**
+
+Unlike traditional SIA-based integrations, which primarily focus on reporting alarm events, Homebridge BE WAVE MQTT provides **fast, bidirectional communication** between your BE WAVE system and Apple Home.
+
+Go beyond basic alarm monitoring. Control compatible devices, manage supported security functions, and receive status updates — all from the Apple Home app.
+
+### Why BE WAVE MQTT?
+
+- **Full Control** — Control supported BE WAVE devices and security functions directly from Apple Home.
+- **Lightning-Fast Communication** — MQTT-based messaging enables low-latency control and status updates.
+- **True Bidirectional Integration** — Commands flow from Apple Home to BE WAVE, while device states and events flow back automatically.
+- **Beyond Traditional SIA** — Not limited to alarm events. Control compatible switches, dimmers, thermostats and security functions.
+- **Local and Responsive** — Communicate through a local MQTT broker without requiring cloud services for the integration.
+- **Seamless Apple Home Experience** — Bring supported BE WAVE functionality into one familiar interface.
+
+**Not just monitoring. Real control.**
 
 ## Features
 
@@ -20,7 +35,7 @@ This independent community plugin connects the SATEL BE WAVE security and smart 
 
 ## Requirements
 
-- Homebridge 1.6.0 or newer (below 2.0.0)
+- Homebridge 1.6.0 or newer (including Homebridge 2.x)
 - Node.js 22 or newer
 - An MQTT broker, such as Mosquitto
 - A SATEL BE WAVE system with MQTT support enabled and configured
