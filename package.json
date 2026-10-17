@@ -1,23 +1,32 @@
 {
   "name": "homebridge-bewave-mqtt",
-  "version": "1.0.0",
+  "displayName": "SATEL BE WAVE - Apple HomeKit",
+  "version": "1.0.4",
   "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
   "main": "dist/index.js",
   "keywords": [
     "homebridge-plugin",
-    "homebridge",
-    "homekit",
+    "satel",
+    "be wave",
     "bewave",
+    "be-wave",
+    "homekit",
+    "apple home",
     "mqtt",
-    "satel"
+    "security system",
+    "security-system",
+    "abax",
+    "abax2",
+    "alarm",
+    "smart home"
   ],
   "license": "MIT",
   "engines": {
-    "homebridge": ">=1.6.0 <2.0.0",
+    "homebridge": ">=1.6.0 <3.0.0",
     "node": ">=22.0.0"
   },
   "peerDependencies": {
-    "homebridge": "^1.6.0"
+    "homebridge": "^1.6.0 || ^2.0.0"
   },
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^2.2.6",

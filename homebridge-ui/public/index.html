@@ -85,28 +85,43 @@
 
       <div class="mb-3">
         <label class="form-label">Broker URL</label>
-        <input id="brokerUrl" class="form-control" readonly>
+        <input id="brokerUrl" class="form-control" value="mqtt://localhost:1883">
       </div>
 
       <div class="mb-3">
         <label class="form-label">Gebruikersnaam</label>
-        <input id="username" class="form-control" readonly>
+        <input id="username" class="form-control">
       </div>
 
       <div class="mb-3">
         <label class="form-label">Status topic</label>
-        <input id="statusPrefix" class="form-control" readonly>
+        <input id="statusPrefix" class="form-control">
       </div>
 
       <div class="mb-3">
         <label class="form-label">Command topic</label>
-        <input id="commandPrefix" class="form-control" readonly>
+        <input id="commandPrefix" class="form-control">
       </div>
     </div>
   </div>
 
   <div class="card mt-3">
     <div class="card-body">
+
+      <div class="mb-3">
+        <label class="form-label">MQTT wachtwoord</label>
+        <input id="mqttPassword" type="password"
+               class="form-control"
+               autocomplete="new-password"
+               placeholder="Voer het MQTT-wachtwoord in">
+      </div>
+      <button id="saveBrokerSettings"
+              type="button"
+              class="btn btn-primary mb-3">
+        Verbindingsinstellingen opslaan
+      </button>
+      <p id="brokerSaveStatus"></p>
+
       <h5>HomeKit-functionaliteit</h5>
       <div id="features">Configuratie laden...</div>
     </div>
@@ -116,6 +131,75 @@
     Verbinding met Homebridge controleren...
   </p>
 </div>
+
+<script>
+document.getElementById('saveBrokerSettings')
+  .addEventListener('click', async () => {
+    const output = document.getElementById('brokerSaveStatus');
+    const button = document.getElementById('saveBrokerSettings');
+
+    button.disabled = true;
+    output.textContent = 'Instellingen opslaan...';
+
+    try {
+      const configs = await homebridge.getPluginConfig();
+      const index = configs.findIndex(
+        item => item.platform === 'BeWaveMQTT'
+      );
+
+      const config = index >= 0
+        ? { ...configs[index] }
+        : {
+            platform: 'BeWaveMQTT',
+            name: 'Be Wave MQTT'
+          };
+
+      const brokerUrl =
+        document.getElementById('brokerUrl').value.trim();
+
+      if (!/^mqtts?:\\/\\//.test(brokerUrl)) {
+        throw new Error(
+          'Gebruik een broker URL zoals mqtt://localhost:1883'
+        );
+      }
+
+      config.brokerUrl = brokerUrl;
+      config.username =
+        document.getElementById('username').value.trim();
+      config.statusPrefix =
+        document.getElementById('statusPrefix').value.trim()
+        || 'bewave/status';
+      config.commandPrefix =
+        document.getElementById('commandPrefix').value.trim()
+        || 'bewave/command';
+
+      const password =
+        document.getElementById('mqttPassword').value;
+
+      if (password) {
+        config.password = password;
+      }
+
+      if (index >= 0) {
+        configs[index] = config;
+      } else {
+        configs.push(config);
+      }
+
+      await homebridge.updatePluginConfig(configs);
+      await homebridge.savePluginConfig();
+
+      output.textContent =
+        'Instellingen opgeslagen. Herstart Homebridge.';
+      document.getElementById('mqttPassword').value = '';
+
+    } catch (error) {
+      output.textContent = 'Fout: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
 
 <script>
 (async () => {
@@ -128,12 +212,20 @@
     );
 
     if (!config) {
-      status.textContent = 'Geen BE WAVE-configuratie gevonden.';
+      document.getElementById('features').textContent =
+        'Nog geen configuratie opgeslagen.';
+      status.textContent =
+        'Vul de MQTT-gegevens in en sla ze op.';
       return;
     }
 
     document.getElementById('brokerUrl').value =
-      config.brokerUrl || '';
+      config.brokerUrl || 'mqtt://localhost:1883';
+
+    document.getElementById('mqttPassword').placeholder =
+      config.password
+        ? 'Leeg laten om het huidige wachtwoord te behouden'
+        : 'Voer het MQTT-wachtwoord in';
 
     document.getElementById('username').value =
       config.username || '';
