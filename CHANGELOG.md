@@ -1,0 +1,21 @@
+# Changelog
+
+## [1.0.4] - 2026-10-17
+
+### Improved
+- Added `mqtt://localhost:1883` as the default MQTT broker address.
+- Improved MQTT password field instructions for first-time installations.
+- Clarified how existing MQTT passwords are preserved.
+
+## [1.0.3] - 2026-10-17
+
+### Fixed
+- Fixed plugin configuration on clean Homebridge installations.
+- MQTT broker settings can now be entered and saved directly in the plugin interface.
+- Added automatic creation of the initial BE WAVE configuration.
+- Fixed the configuration loading message when no configuration exists.
+
+## [1.0.2] - 2026-10-17
+
+### Changed
+- Updated compatibility metadata for Homebridge 2.x.
