@@ -133,72 +133,99 @@
 </div>
 
 <script>
+document.getElementById('saveBrokerSettings').textContent =
+  'MQTT-verbinding testen';
+
 document.getElementById('saveBrokerSettings')
   .addEventListener('click', async () => {
-    const output = document.getElementById('brokerSaveStatus');
     const button = document.getElementById('saveBrokerSettings');
+    const output = document.getElementById('brokerSaveStatus');
 
     button.disabled = true;
-    output.textContent = 'Instellingen opslaan...';
+    output.textContent = 'MQTT-verbinding testen...';
 
     try {
       const configs = await homebridge.getPluginConfig();
-      const index = configs.findIndex(
+      const saved = configs.find(
         item => item.platform === 'BeWaveMQTT'
-      );
+      ) || {};
 
-      const config = index >= 0
-        ? { ...configs[index] }
-        : {
-            platform: 'BeWaveMQTT',
-            name: 'Be Wave MQTT'
-          };
+      const config = {
+        brokerUrl: document.getElementById('brokerUrl').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('mqttPassword').value ||
+                  saved.password || undefined,
+      };
 
-      const brokerUrl =
-        document.getElementById('brokerUrl').value.trim();
+      const result = await homebridge.request('/test-connection', config);
 
-      if (!/^mqtts?:\\/\\//.test(brokerUrl)) {
-        throw new Error(
-          'Gebruik een broker URL zoals mqtt://localhost:1883'
-        );
-      }
-
-      config.brokerUrl = brokerUrl;
-      config.username =
-        document.getElementById('username').value.trim();
-      config.statusPrefix =
-        document.getElementById('statusPrefix').value.trim()
-        || 'bewave/status';
-      config.commandPrefix =
-        document.getElementById('commandPrefix').value.trim()
-        || 'bewave/command';
-
-      const password =
-        document.getElementById('mqttPassword').value;
-
-      if (password) {
-        config.password = password;
-      }
-
-      if (index >= 0) {
-        configs[index] = config;
-      } else {
-        configs.push(config);
-      }
-
-      await homebridge.updatePluginConfig(configs);
-      await homebridge.savePluginConfig();
-
-      output.textContent =
-        'Instellingen opgeslagen. Herstart Homebridge.';
-      document.getElementById('mqttPassword').value = '';
+      output.textContent = result.connected
+        ? 'MQTT-verbinding geslaagd.'
+        : 'MQTT-verbinding mislukt.';
 
     } catch (error) {
-      output.textContent = 'Fout: ' + error.message;
+      output.textContent = 'Verbindingsfout: ' + error.message;
     } finally {
       button.disabled = false;
     }
   });
+</script>
+
+<script>
+const mqttFieldIds = [
+  'brokerUrl', 'username', 'mqttPassword',
+  'statusPrefix', 'commandPrefix'
+];
+
+let mqttSyncQueue = Promise.resolve();
+
+async function syncMqttSettings() {
+  const configs = await homebridge.getPluginConfig();
+  const index = configs.findIndex(
+    item => item.platform === 'BeWaveMQTT'
+  );
+
+  const config = index >= 0
+    ? { ...configs[index] }
+    : { platform: 'BeWaveMQTT', name: 'Be Wave MQTT' };
+
+  const brokerUrl = document.getElementById('brokerUrl').value.trim();
+
+  if (!/^mqtts?:\/\//.test(brokerUrl)) {
+    throw new Error('Ongeldige MQTT broker URL');
+  }
+
+  config.brokerUrl = brokerUrl;
+  config.username = document.getElementById('username').value.trim();
+  config.statusPrefix =
+    document.getElementById('statusPrefix').value.trim() || 'bewave/status';
+  config.commandPrefix =
+    document.getElementById('commandPrefix').value.trim() || 'bewave/command';
+
+  const password = document.getElementById('mqttPassword').value;
+  if (password) config.password = password;
+
+  if (index >= 0) configs[index] = config;
+  else configs.push(config);
+
+  // Alleen bijwerken in Homebridge, NIET opslaan op schijf.
+  await homebridge.updatePluginConfig(configs);
+
+  document.getElementById('brokerSaveStatus').textContent =
+    'Wijzigingen gemaakt. Druk rechtsonder op SAVE om op te slaan.';
+}
+
+for (const id of mqttFieldIds) {
+  document.getElementById(id).addEventListener('input', () => {
+    mqttSyncQueue = mqttSyncQueue
+      .catch(() => {})
+      .then(syncMqttSettings)
+      .catch(error => {
+        document.getElementById('brokerSaveStatus').textContent =
+          'Configuratiefout: ' + error.message;
+      });
+  });
+}
 </script>
 
 <script>
@@ -274,11 +301,7 @@ document.getElementById('saveBrokerSettings')
 <p id="discoveryStatus" class="mt-3"></p>
 
 <h4 class="mt-4">Apparaten</h4>
-<button id="saveDevicesButton"
-        class="btn btn-primary mt-3 mb-2"
-        type="button" disabled>
-  Apparaatinstellingen opslaan
-</button>
+
 <p id="saveDevicesStatus" class="small text-muted"></p>
 
 <div class="bw-searchbar">
@@ -315,12 +338,7 @@ document.getElementById('saveBrokerSettings')
     <select id="alarmNight" class="form-control"></select>
   </div>
 
-  <button id="saveAlarmMapping"
-          class="btn btn-primary"
-          type="button"
-          disabled>
-    Beveiligingsinstellingen opslaan
-  </button>
+
 
   <p id="alarmSaveStatus" class="mt-3"></p>
 </div>
@@ -405,8 +423,7 @@ async function runDiscovery(sendSync) {
       );
 
       const configuredDevices = config.devices || [];
-      document.getElementById('saveDevicesButton').disabled =
-        devices.length === 0;
+
 
 
       const supportedTypes = new Set([
@@ -650,16 +667,14 @@ async function runDiscovery(sendSync) {
 // APPARAATCONFIGURATIE OPSLAAN
 // ========================================
 
-document.getElementById('saveDevicesButton')
-  .addEventListener('click', async () => {
+async function syncDeviceSettings() {
 
-    const button =
-      document.getElementById('saveDevicesButton');
+
 
     const status =
       document.getElementById('saveDevicesStatus');
 
-    button.disabled = true;
+
     status.textContent = 'Instellingen controleren...';
 
     try {
@@ -756,25 +771,33 @@ document.getElementById('saveDevicesButton')
       configBlocks[platformIndex] = config;
 
       await homebridge.updatePluginConfig(configBlocks);
-      await homebridge.savePluginConfig();
+
 
       status.textContent =
-        '✓ Apparaatinstellingen succesvol opgeslagen. ' +
-        'Herstart Homebridge om wijzigingen toe te passen.';
+        'Apparaatwijzigingen klaar. Klik op SAVE om op te slaan.';
 
       status.style.color = '#48c78e';
       status.style.fontWeight = 'bold';
 
-      button.textContent = '✓ OPGESLAGEN';
+
 
     } catch (error) {
       status.textContent =
         'Opslaan mislukt: ' + error.message;
-    } finally {
-      button.disabled = false;
     }
-  });
+}
 
+
+
+let deviceSyncQueue = Promise.resolve();
+
+document.getElementById('deviceResults').addEventListener('change', event => {
+  if (!event.target.matches('input[data-device-id]')) return;
+
+  deviceSyncQueue = deviceSyncQueue
+    .catch(() => {})
+    .then(syncDeviceSettings);
+});
 
 function filterBeWaveDevices() {
   const search = document.getElementById('deviceSearch');
@@ -859,12 +882,11 @@ async function loadAlarmMapping(alarms) {
     select.value = mapping[mode] || '';
   }
 
-  document.getElementById('saveAlarmMapping').disabled = false;
+
 }
 
-document.getElementById('saveAlarmMapping')
-  .addEventListener('click', async () => {
-    const button = document.getElementById('saveAlarmMapping');
+async function syncAlarmMapping() {
+
     const status = document.getElementById('alarmSaveStatus');
 
     const mapping = {
@@ -889,7 +911,7 @@ document.getElementById('saveAlarmMapping')
       return;
     }
 
-    button.disabled = true;
+
     status.textContent = 'Beveiligingsinstellingen opslaan...';
 
     try {
@@ -918,16 +940,24 @@ document.getElementById('saveAlarmMapping')
 
       // alarm.enabled, priority en overige instellingen behouden.
       await homebridge.updatePluginConfig(configs);
-      await homebridge.savePluginConfig();
+
 
       status.textContent =
-        'Beveiligingsinstellingen opgeslagen. ' +
-        'Herstart Homebridge om ze toe te passen.';
+        'Alarmgroepwijzigingen klaar. Klik op SAVE om op te slaan.';
     } catch (error) {
       status.textContent = 'Opslaan mislukt: ' + error.message;
-    } finally {
-      button.disabled = false;
     }
+}
+
+
+let alarmSyncQueue = Promise.resolve();
+
+for (const id of ['alarmStay', 'alarmAway', 'alarmNight']) {
+  document.getElementById(id).addEventListener('change', () => {
+    alarmSyncQueue = alarmSyncQueue
+      .catch(() => {})
+      .then(syncAlarmMapping);
   });
+}
 
 </script>

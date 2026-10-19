@@ -8,6 +8,33 @@ class BeWaveUiServer extends HomebridgePluginUiServer {
   constructor() {
     super();
 
+    this.onRequest('/test-connection', async (config) => {
+      if (!config?.brokerUrl || !/^mqtts?:\/\//.test(config.brokerUrl)) {
+        throw new Error('Ongeldige MQTT broker URL');
+      }
+
+      return new Promise((resolve, reject) => {
+        const client = mqtt.connect(config.brokerUrl, {
+          username: config.username || undefined,
+          password: config.password || undefined,
+          reconnectPeriod: 0,
+          connectTimeout: 5000,
+        });
+
+        let finished = false;
+        const finish = (error) => {
+          if (finished) return;
+          finished = true;
+          client.end(true);
+          if (error) reject(new Error(error.message || String(error)));
+          else resolve({ connected: true });
+        };
+
+        client.once('connect', () => finish());
+        client.once('error', finish);
+      });
+    });
+
     this.onRequest('/discover', async (config) => {
       return this.discover(config, false);
     });
@@ -20,8 +47,7 @@ class BeWaveUiServer extends HomebridgePluginUiServer {
       const fs = require('node:fs/promises');
       const path = require('node:path');
 
-      const storagePath = process.env.HOMEBRIDGE_STORAGE_PATH ||
-        '/var/lib/homebridge';
+      const storagePath = this.homebridgeStoragePath;
 
       const cachePath = path.join(
         storagePath,
