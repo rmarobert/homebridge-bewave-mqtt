@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.10] - 2026-10-19
+
+### Added
+- MQTT connection test using current input values without saving.
+- Unsaved changes notification with guidance to use Homebridge SAVE.
+
+### Changed
+- Unified MQTT, device and alarm mapping configuration under Homebridge SAVE.
+- Removed redundant configuration save buttons.
+- Updated cache storage handling to use the Homebridge UI storage path API.
+
+### Fixed
+- MQTT broker URL validation in the configuration interface.
+
+### Notes
+- Child Bridge operation has not yet been independently tested.
+
 ## [1.0.6] - 2026-10-17
 
 ### Fixed
