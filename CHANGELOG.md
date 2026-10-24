@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.11] - 2026-10-24
+
+### Added
+- Added MQTT broker and BE WAVE Hybrid online/offline indicators.
+- Added automatic connection monitoring every 15 seconds.
+- Added automatic Hybrid name detection from MQTT status messages.
+- Added multilingual support for Dutch, English, French, German and Polish.
+- Added persistent language selection in the plugin interface.
+
+### Fixed
+- Fixed accessory registration detection in Homebridge Child Bridge mode.
+- Corrected accessory cache lookup based on Child Bridge username.
+
+### Improved
+- Improved device registration status feedback.
+- Improved connection diagnostics and device management interface.
+- Improved localization of configuration and status messages.
+
 ## [1.0.10] - 2026-10-19
 
 ### Added

@@ -74,14 +74,32 @@
 }
 </style>
 <div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap: 16px;">
   <h2>SATEL BE WAVE MQTT</h2>
+  <div class="d-flex justify-content-end align-items-center mb-3"
+     style="gap: 16px;">
+  <label id="languageLabel" for="languageSelect"
+         style="margin: 0;">
+    Taal:
+  </label>
+  <select id="languageSelect"
+          class="form-control"
+          style="width: 180px;">
+    <option value="nl">🇳🇱 Nederlands</option>
+    <option value="en">🇬🇧 English</option>
+    <option value="fr">🇫🇷 Français</option>
+    <option value="de">🇩🇪 Deutsch</option>
+    <option value="pl">🇵🇱 Polski</option>
+  </select>
+</div>
+</div>
   <p class="text-muted">
-    Configuratie en beheer van de BE WAVE HomeKit-integratie
+    <span data-i18n="productDescription">Configuratie en beheer van de BE WAVE HomeKit-integratie</span>
   </p>
 
   <div class="card mt-4">
     <div class="card-body">
-      <h5>MQTT-verbinding</h5>
+      <h5 data-i18n="mqttConnection">MQTT-verbinding</h5>
 
       <div class="mb-3">
         <label class="form-label">Broker URL</label>
@@ -89,17 +107,17 @@
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Gebruikersnaam</label>
+        <label class="form-label" data-i18n="username">Gebruikersnaam</label>
         <input id="username" class="form-control">
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Status topic</label>
+        <label class="form-label" data-i18n="statusTopic">Status topic</label>
         <input id="statusPrefix" class="form-control" value="bewave/status">
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Command topic</label>
+        <label class="form-label" data-i18n="commandTopic">Command topic</label>
         <input id="commandPrefix" class="form-control" value="bewave/command">
       </div>
     </div>
@@ -109,8 +127,8 @@
     <div class="card-body">
 
       <div class="mb-3">
-        <label class="form-label">MQTT wachtwoord</label>
-        <input id="mqttPassword" type="password"
+        <label class="form-label" data-i18n="mqttPassword">MQTT wachtwoord</label>
+        <input id="mqttPassword" data-i18n-placeholder="passwordEnter" type="password"
                class="form-control"
                autocomplete="new-password"
                placeholder="Voer het MQTT-wachtwoord in">
@@ -122,13 +140,13 @@
       </button>
       <p id="brokerSaveStatus"></p>
 
-      <h5>HomeKit-functionaliteit</h5>
-      <div id="features">Configuratie laden...</div>
+      <h5 data-i18n="homekitFeatures">HomeKit-functionaliteit</h5>
+      <div id="features"><span data-i18n="loadingConfig">Configuratie laden...</span></div>
     </div>
   </div>
 
   <p id="status" class="mt-3 text-muted">
-    Verbinding met Homebridge controleren...
+    <span data-i18n="checkingHomebridge">Verbinding met Homebridge controleren...</span>
   </p>
 </div>
 
@@ -142,7 +160,7 @@ document.getElementById('saveBrokerSettings')
     const output = document.getElementById('brokerSaveStatus');
 
     button.disabled = true;
-    output.textContent = 'MQTT-verbinding testen...';
+    output.textContent = bwTranslate('connectionTestRunning');
 
     try {
       const configs = await homebridge.getPluginConfig();
@@ -160,11 +178,11 @@ document.getElementById('saveBrokerSettings')
       const result = await homebridge.request('/test-connection', config);
 
       output.textContent = result.connected
-        ? 'MQTT-verbinding geslaagd.'
-        : 'MQTT-verbinding mislukt.';
+        ? bwTranslate('connectionSuccessful')
+        : bwTranslate('connectionFailed');
 
     } catch (error) {
-      output.textContent = 'Verbindingsfout: ' + error.message;
+      output.textContent = bwTranslate('connectionError') + error.message;
     } finally {
       button.disabled = false;
     }
@@ -212,7 +230,7 @@ async function syncMqttSettings() {
   await homebridge.updatePluginConfig(configs);
 
   document.getElementById('brokerSaveStatus').textContent =
-    'Wijzigingen gemaakt. Druk rechtsonder op SAVE om op te slaan.';
+    bwTranslate('configChanges');
 }
 
 for (const id of mqttFieldIds) {
@@ -222,7 +240,7 @@ for (const id of mqttFieldIds) {
       .then(syncMqttSettings)
       .catch(error => {
         document.getElementById('brokerSaveStatus').textContent =
-          'Configuratiefout: ' + error.message;
+          bwTranslate('configError') + error.message;
       });
   });
 }
@@ -240,9 +258,9 @@ for (const id of mqttFieldIds) {
 
     if (!config) {
       document.getElementById('features').textContent =
-        'Nog geen configuratie opgeslagen.';
+        bwTranslate('noConfigSaved');
       status.textContent =
-        'Vul de MQTT-gegevens in en sla ze op.';
+        bwTranslate('enterMqtt');
       return;
     }
 
@@ -264,9 +282,9 @@ for (const id of mqttFieldIds) {
       config.commandPrefix ?? 'bewave/command';
 
     const features = [
-      ['Scènes', config.includeScenes ?? false],
-      ['Virtuele apparaten', config.includeVirtualDevices ?? true],
-      ['Beveiligingssysteem', config.includeSecuritySystem ?? true],
+      [bwTranslate('scenes'), config.includeScenes ?? false],
+      [bwTranslate('virtualDevices'), config.includeVirtualDevices ?? true],
+      [bwTranslate('securitySystem'), config.includeSecuritySystem ?? true],
     ];
 
     const container = document.getElementById('features');
@@ -275,66 +293,76 @@ for (const id of mqttFieldIds) {
     for (const [name, enabled] of features) {
       const row = document.createElement('p');
       row.textContent = name + ': ' +
-        (enabled ? 'Ingeschakeld' : 'Uitgeschakeld');
+        (enabled ? bwTranslate('enabled') : bwTranslate('disabled'));
       container.appendChild(row);
     }
 
-    status.textContent = 'Configuratie succesvol ingelezen.';
+    status.textContent = bwTranslate('configLoaded');
 
   } catch (error) {
     status.textContent =
-      'Fout bij laden configuratie: ' + error.message;
+      bwTranslate('configLoadError') + error.message;
   }
 })();
 </script>
 
 <hr class="mt-4">
 
-<h3>BE WAVE apparaten</h3>
-<p>Ontdek apparaten en alarmgroepen via MQTT.</p>
 
-<button id="syncButton" class="btn btn-success ml-2"
+
+
+
+<div class="card p-3 mb-3" aria-live="polite">
+  <h4 data-i18n="connectionStatus">Verbindingsstatus</h4>
+  <p id="bwBrokerStatus">● MQTT Broker: Controleren...</p>
+  <p id="bwHybridStatus">● BE WAVE Hybrid: Controleren...</p>
+</div>
+
+<h3 data-i18n="devicesTitle">BE WAVE apparaten</h3>
+<p data-i18n="discoverDescription">Ontdek apparaten en alarmgroepen via MQTT.</p>
+
+<button id="syncButton" data-i18n="discover" class="btn btn-success ml-2"
         type="button">
   Be Wave apparaten zoeken
 </button>
 
 <p id="discoveryStatus" class="mt-3"></p>
 
-<h4 class="mt-4">Apparaten</h4>
+<h4 class="mt-4" data-i18n="devices">Apparaten</h4>
 
 <p id="saveDevicesStatus" class="small text-muted"></p>
 
 <div class="bw-searchbar">
-  <input id="deviceSearch"
+  <input id="deviceSearch" data-i18n-placeholder="searchDevices"
          class="form-control"
          type="search"
          placeholder="Zoek apparaat, index of type...">
   <span id="deviceCount"></span>
 </div>
-<div id="deviceResults">
+<div id="deviceResults" data-i18n="notSearchedDevices">
   Nog geen apparaten gezocht.
 </div>
 
-<h4 class="mt-4">Alarmgroepen</h4>
+<h4 class="mt-4" data-i18n="alarmGroups">Alarmgroepen</h4>
 
 <div class="card p-3 mb-3">
-  <h4>Beveiliging configureren</h4>
+  <h4 data-i18n="securityConfiguration">Beveiliging configureren</h4>
   <p class="text-muted">
-    Koppel een BE WAVE-alarmgroep aan iedere HomeKit-modus.
+    <span data-i18n="securityDescription">Koppel een BE WAVE-alarmgroep aan iedere HomeKit-modus.</span>
   </p>
 
   <div class="mb-3">
-    <label for="alarmStay">Thuis</label>
+    <label for="alarmStay" data-i18n="home">Thuis</label>
     <select id="alarmStay" class="form-control"></select>
   </div>
 
   <div class="mb-3">
-    <label for="alarmAway">Weg</label>
+    <label for="alarmAway" data-i18n="away">Weg</label>
     <select id="alarmAway" class="form-control"></select>
   </div>
 
   <div class="mb-3">
-    <label for="alarmNight">Nacht</label>
+    <label for="alarmNight" data-i18n="night">Nacht</label>
     <select id="alarmNight" class="form-control"></select>
   </div>
 
@@ -342,11 +370,63 @@ for (const id of mqttFieldIds) {
 
   <p id="alarmSaveStatus" class="mt-3"></p>
 </div>
-<div id="alarmResults">
+<div id="alarmResults" data-i18n="notSearchedAlarms">
   Nog geen alarmgroepen gezocht.
 </div>
 
 <script>
+
+let bwStatusChecking = false;
+
+async function refreshBwConnectionStatus() {
+  if (bwStatusChecking) return;
+  bwStatusChecking = true;
+
+  const brokerEl = document.getElementById('bwBrokerStatus');
+  const hybridEl = document.getElementById('bwHybridStatus');
+
+  const show = (element, label, state) => {
+    const color = state === true ? '#198754'
+      : state === false ? '#dc3545' : '#6c757d';
+    const word = state === true ? bwTranslate('online')
+      : state === false ? bwTranslate('offline') : bwTranslate('unknown');
+    element.textContent = '● ' + label + ': ' + word;
+    element.dataset.statusState = state === null ? 'unknown' : (state ? 'online' : 'offline');
+    element.dataset.statusName = label;
+    element.style.color = color;
+    element.style.fontWeight = '600';
+  };
+
+  try {
+    const configs = await homebridge.getPluginConfig();
+    const config = configs.find(
+      item => item.platform === 'BeWaveMQTT'
+    );
+
+    if (!config) throw new Error(bwTranslate('connectionUnavailable'));
+
+    const result = await homebridge.request(
+      '/connection-status', config
+    );
+
+    show(brokerEl, 'MQTT Broker', result.brokerOnline);
+    show(
+      hybridEl,
+      result.name || 'BE WAVE Hybrid',
+      result.hybridOnline
+    );
+  } catch (error) {
+    show(brokerEl, 'MQTT Broker', null);
+    show(hybridEl, 'BE WAVE Hybrid', null);
+    console.warn('Statuscontrole mislukt:', error);
+  } finally {
+    bwStatusChecking = false;
+  }
+}
+
+refreshBwConnectionStatus();
+setInterval(refreshBwConnectionStatus, 15000);
+
 document.getElementById('syncButton')
   .addEventListener('click', () => runDiscovery(true));
 
@@ -358,7 +438,7 @@ async function runDiscovery(sendSync) {
 
     button.disabled = true;
 
-    status.textContent = 'Be Wave apparaten zoeken (maximaal 8 seconden)...';
+    status.textContent = bwTranslate('discoverBusy');
 
     try {
       const configs = await homebridge.getPluginConfig();
@@ -367,7 +447,7 @@ async function runDiscovery(sendSync) {
       );
 
       if (!config) {
-        throw new Error('Geen BE WAVE-configuratie gevonden');
+        throw new Error(bwTranslate('noBewaveConfig'));
       }
 
       const result = await homebridge.request(
@@ -376,12 +456,14 @@ async function runDiscovery(sendSync) {
       );
 
       status.textContent = result.connected
-        ? 'MQTT verbonden. Zoekactie afgerond.'
-        : 'MQTT niet verbonden.';
+        ? bwTranslate('mqttDiscoverOK')
+        : bwTranslate('mqttDiscoverNo');
 
       const devices = result.devices || [];
       const alarms = result.alarms || [];
 
+      deviceResults.removeAttribute('data-i18n');
+      alarmResults.removeAttribute('data-i18n');
       deviceResults.replaceChildren();
       alarmResults.replaceChildren();
 
@@ -402,7 +484,7 @@ async function runDiscovery(sendSync) {
 
       if (!devices.length) {
         deviceResults.textContent =
-          'Geen apparaten ontvangen tijdens de zoekactie.';
+          bwTranslate('noDevicesDuring');
       }
 
       // Bestaande registraties ophalen uit Homebridge-cache
@@ -411,7 +493,8 @@ async function runDiscovery(sendSync) {
 
       try {
         registeredDevices = await homebridge.request(
-          '/registered-devices'
+          '/registered-devices',
+	  config
         );
         registrationAvailable = true;
       } catch (error) {
@@ -476,20 +559,27 @@ async function runDiscovery(sendSync) {
             : 'bw-status bw-unregistered';
 
           badge.textContent = !registrationAvailable
-            ? 'Onbekend'
+            ? bwTranslate('unknown')
             : registered
-              ? 'Geregistreerd'
+              ? bwTranslate('registered')
               : !supported
-                ? 'Niet ondersteund'
-                : 'Niet toegevoegd';
+                ? bwTranslate('unsupported')
+                : bwTranslate('notAdded');
 
+          if (registrationAvailable) {
+            badge.dataset.i18n = registered ? 'registered' :
+              !supported ? 'unsupported' : 'notAdded';
+          } else {
+            badge.dataset.i18n = 'unknown';
+          }
           summary.append(info, badge);
 
           const editor = document.createElement('div');
           editor.className = 'bw-device-editor';
 
           const label = document.createElement('label');
-          label.textContent = 'Naam in HomeKit';
+          label.dataset.i18n = 'homekitName';
+          label.textContent = bwTranslate('homekitName');
 
           const nameInput = document.createElement('input');
           nameInput.type = 'text';
@@ -512,20 +602,20 @@ async function runDiscovery(sendSync) {
           toggle.dataset.supported = String(supported);
 
           const toggleText = document.createElement('span');
-          toggleText.textContent = 'Gebruiken in HomeKit';
+          toggleText.dataset.i18n = 'useHomekit';
+          toggleText.textContent = bwTranslate('useHomekit');
 
           toggleLabel.append(toggle, toggleText);
 
           const explanation = document.createElement('small');
           explanation.className = 'bw-explanation';
+          explanation.dataset.i18n = registered ? 'registeredExplanation' :
+            !supported ? 'unsupportedExplanation' : 'addExplanation';
           explanation.textContent = registered
-            ? 'Dit apparaat is geregistreerd. Verwijderen kan ' +
-              'via Homebridge bij de individuele accessoires.'
+            ? bwTranslate('registeredExplanation')
             : !supported
-              ? 'Dit apparaattype wordt nog niet ondersteund ' +
-                'door de Homebridge BE WAVE-plugin.'
-              : 'Vink aan en sla de instellingen op om dit ' +
-                'apparaat na een Homebridge-herstart toe te voegen.';
+              ? bwTranslate('unsupportedExplanation')
+              : bwTranslate('addExplanation');
 
           editor.append(
             label,
@@ -538,7 +628,7 @@ async function runDiscovery(sendSync) {
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.className = 'btn btn-outline-danger mt-3';
-            removeButton.textContent = 'Verwijdering voorbereiden';
+            removeButton.textContent = bwTranslate('prepareRemoval');
 
             const removeStatus = document.createElement('p');
             removeStatus.className = 'small mt-2';
@@ -546,24 +636,22 @@ async function runDiscovery(sendSync) {
             removeButton.addEventListener('click', async () => {
               if (removeButton.dataset.confirmed !== 'true') {
                 removeButton.dataset.confirmed = 'true';
-                removeButton.textContent = 'Bevestigen';
+                removeButton.textContent = bwTranslate('confirm');
 
                 removeStatus.textContent =
-                  'Let op: hiermee schakel je automatisch opnieuw ' +
-                  'toevoegen uit voor ' + displayName + '. ' +
-                  'Het bestaande accessoire blijft aanwezig. ' +
-                  'Klik nogmaals op Bevestigen om door te gaan.';
+                  bwTranslate('removalWarningStart') + displayName +
+                  bwTranslate('removalWarningEnd');
 
                 removeStatus.style.color = '#e5a44d';
 
                 const cancelButton = document.createElement('button');
                 cancelButton.type = 'button';
                 cancelButton.className = 'btn btn-secondary mt-2 ml-2';
-                cancelButton.textContent = 'Annuleren';
+                cancelButton.textContent = bwTranslate('cancel');
 
                 cancelButton.addEventListener('click', () => {
                   removeButton.dataset.confirmed = 'false';
-                  removeButton.textContent = 'Verwijdering voorbereiden';
+                  removeButton.textContent = bwTranslate('prepareRemoval');
                   removeStatus.textContent = '';
                   cancelButton.remove();
                 });
@@ -581,7 +669,7 @@ async function runDiscovery(sendSync) {
                 );
 
                 if (index === -1) {
-                  throw new Error('BE WAVE-configuratie ontbreekt');
+                  throw new Error(bwTranslate('noBewaveConfigShort'));
                 }
 
                 const config = {...configs[index]};
@@ -613,14 +701,13 @@ async function runDiscovery(sendSync) {
                 await homebridge.savePluginConfig();
 
                 removeStatus.textContent =
-                  'Automatisch toevoegen uitgeschakeld. ' +
-                  'Verwijder het accessoire nu via Homebridge.';
+                  bwTranslate('removalSuccess');
 
-                removeButton.textContent = 'Verwijdering voorbereid';
+                removeButton.textContent = bwTranslate('removalPrepared');
 
               } catch (error) {
                 removeStatus.textContent =
-                  'Fout: ' + error.message;
+                  bwTranslate('genericError') + error.message;
                 removeButton.disabled = false;
               }
             });
@@ -635,18 +722,18 @@ async function runDiscovery(sendSync) {
       filterBeWaveDevices();
       if (!alarms.length) {
         alarmResults.textContent =
-          'Geen alarmgroepen ontvangen tijdens de zoekactie.';
+          bwTranslate('noAlarmsDuring');
       }
 
       alarms.forEach(alarm => {
         const displayName = alarm.name === 'FULLARM'
-          ? 'Volledig Beveiligen'
+          ? bwTranslate('fullArm')
           : alarm.name;
 
         addRow(
           alarmResults,
           displayName,
-          `MQTT: ${alarm.topicName} | Status: ${alarm.armingStatus}`
+          `MQTT: ${alarm.topicName} | ${bwTranslate('statusLabel')}${alarm.armingStatus}`
         );
       });
 
@@ -656,7 +743,7 @@ async function runDiscovery(sendSync) {
         ` ${devices.length} apparaten en ${alarms.length} alarmgroepen gevonden.`;
 
     } catch (error) {
-      status.textContent = 'Fout: ' + error.message;
+      status.textContent = bwTranslate('genericError') + error.message;
     } finally {
       button.disabled = false;
 
@@ -675,7 +762,7 @@ async function syncDeviceSettings() {
       document.getElementById('saveDevicesStatus');
 
 
-    status.textContent = 'Instellingen controleren...';
+    status.textContent = bwTranslate('settingsChecking');
 
     try {
       const configBlocks =
@@ -686,7 +773,7 @@ async function syncDeviceSettings() {
       );
 
       if (platformIndex === -1) {
-        throw new Error('BE WAVE-configuratie ontbreekt');
+        throw new Error(bwTranslate('noBewaveConfigShort'));
       }
 
       // Bestaande configuratie behouden
@@ -703,7 +790,7 @@ async function syncDeviceSettings() {
       );
 
       if (!cards.length) {
-        throw new Error('Geen apparaten om op te slaan');
+        throw new Error(bwTranslate('noDevicesSave'));
       }
 
       for (const input of cards) {
@@ -711,12 +798,12 @@ async function syncDeviceSettings() {
         const name = input.value.trim();
 
         if (!Number.isSafeInteger(id) || id < 0) {
-          throw new Error('Ongeldige apparaatindex');
+          throw new Error(bwTranslate('invalidIndex'));
         }
 
         if (!name) {
           throw new Error(
-            'Apparaat ' + id + ' heeft geen naam'
+            bwTranslate('devicePrefix') + id + bwTranslate('deviceNoName')
           );
         }
 
@@ -730,7 +817,7 @@ async function syncDeviceSettings() {
 
         if (!checkbox) {
           throw new Error(
-            'HomeKit-selectie ontbreekt voor apparaat ' + id
+            bwTranslate('missingHomekitSelection') + id
           );
         }
 
@@ -774,7 +861,7 @@ async function syncDeviceSettings() {
 
 
       status.textContent =
-        'Apparaatwijzigingen klaar. Klik op SAVE om op te slaan.';
+        bwTranslate('deviceChanges');
 
       status.style.color = '#48c78e';
       status.style.fontWeight = 'bold';
@@ -783,7 +870,7 @@ async function syncDeviceSettings() {
 
     } catch (error) {
       status.textContent =
-        'Opslaan mislukt: ' + error.message;
+        bwTranslate('saveFailure') + error.message;
     }
 }
 
@@ -834,7 +921,7 @@ async function loadAlarmMapping(alarms) {
   );
 
   if (!config) {
-    throw new Error('BE WAVE-configuratie ontbreekt');
+    throw new Error(bwTranslate('noBewaveConfigShort'));
   }
 
   const mapping = config.alarm?.mapping || {};
@@ -867,13 +954,13 @@ async function loadAlarmMapping(alarms) {
       const option = document.createElement('option');
       option.value = name;
       option.textContent = !name
-        ? 'Niet toegewezen'
+        ? bwTranslate('notAssigned')
         : name === 'FULLARM'
-          ? 'Volledig Beveiligen'
+          ? bwTranslate('fullArm')
           : name;
 
       if (name && !names.includes(name)) {
-        option.textContent += ' (niet ontdekt)';
+        option.textContent += bwTranslate('notDiscovered');
       }
 
       select.appendChild(option);
@@ -900,19 +987,18 @@ async function syncAlarmMapping() {
 
     if (new Set(selected).size !== selected.length) {
       status.textContent =
-        'Kies verschillende alarmgroepen voor Thuis, Weg en Nacht.';
+        bwTranslate('duplicateAlarm');
       return;
     }
 
     if (selected.some(name => !discoveredAlarmNames.includes(name))) {
       status.textContent =
-        'Een geselecteerde alarmgroep is niet ontdekt. ' +
-        'Synchroniseer opnieuw voordat je opslaat.';
+        bwTranslate('undiscoveredAlarm');
       return;
     }
 
 
-    status.textContent = 'Beveiligingsinstellingen opslaan...';
+    status.textContent = bwTranslate('savingSecurity');
 
     try {
       const configs = await homebridge.getPluginConfig();
@@ -921,7 +1007,7 @@ async function syncAlarmMapping() {
       );
 
       if (index === -1) {
-        throw new Error('BE WAVE-configuratie ontbreekt');
+        throw new Error(bwTranslate('noBewaveConfigShort'));
       }
 
       const previous = configs[index];
@@ -943,9 +1029,9 @@ async function syncAlarmMapping() {
 
 
       status.textContent =
-        'Alarmgroepwijzigingen klaar. Klik op SAVE om op te slaan.';
+        bwTranslate('alarmChanges');
     } catch (error) {
-      status.textContent = 'Opslaan mislukt: ' + error.message;
+      status.textContent = bwTranslate('saveFailure') + error.message;
     }
 }
 
@@ -961,3 +1047,56 @@ for (const id of ['alarmStay', 'alarmAway', 'alarmNight']) {
 }
 
 </script>
+
+
+<script>
+const bwTranslations = {"en":{"language":"Language","connectionStatus":"Connection status","broker":"MQTT Broker","hybrid":"BE WAVE Hybrid","online":"Online","offline":"Offline","unknown":"Unknown","checking":"Checking...","connected":"Connected","disconnected":"Disconnected","testConnection":"Test MQTT connection","connectionSuccessful":"MQTT connection successful.","connectionFailed":"MQTT connection failed.","devicesTitle":"BE WAVE devices","discoverDescription":"Discover devices and alarm groups via MQTT.","discover":"Discover BE WAVE devices","searching":"Searching for devices...","discoveryCompleted":"Discovery completed.","devices":"Devices","device":"Device","searchDevices":"Search device, index or type...","noDevices":"No devices found.","notAdded":"Not added","selected":"Selected","registered":"Registered","alarmGroups":"Alarm groups","securityConfiguration":"Configure security","securityDescription":"Assign a BE WAVE alarm group to each HomeKit mode.","home":"Home","away":"Away","night":"Night","save":"Save","cancel":"Cancel","settings":"Settings","status":"Status","error":"Error","loading":"Loading...","notAvailable":"Not available","productDescription":"Configure and manage BE WAVE HomeKit integration","mqttConnection":"MQTT connection","username":"Username","statusTopic":"Status topic","commandTopic":"Command topic","mqttPassword":"MQTT password","passwordEnter":"Enter the MQTT password","passwordKeep":"Leave blank to keep the current password","homekitFeatures":"HomeKit functionality","loadingConfig":"Loading configuration...","checkingHomebridge":"Checking Homebridge connection...","connectionTestRunning":"Testing MQTT connection...","connectionError":"Connection error: ","configChanges":"Changes made. Click SAVE in the bottom-right corner to save.","configError":"Configuration error: ","noConfigSaved":"No configuration saved yet.","enterMqtt":"Enter the MQTT details and save them.","scenes":"Scenes","virtualDevices":"Virtual devices","securitySystem":"Security system","enabled":"Enabled","disabled":"Disabled","configLoaded":"Configuration loaded successfully.","configLoadError":"Error loading configuration: ","notSearchedDevices":"No device search performed yet.","notSearchedAlarms":"No alarm groups searched yet.","discoverBusy":"Searching for BE WAVE devices (up to 8 seconds)...","noBewaveConfig":"No BE WAVE configuration found","mqttDiscoverOK":"MQTT connected. Discovery completed.","mqttDiscoverNo":"MQTT not connected.","noDevicesDuring":"No devices received during discovery.","unsupported":"Not supported","homekitName":"Name in HomeKit","useHomekit":"Use in HomeKit","registeredExplanation":"This device is registered. Remove it through Homebridge under individual accessories.","unsupportedExplanation":"This device type is not yet supported by the Homebridge BE WAVE plugin.","addExplanation":"Select and save the settings to add this device after restarting Homebridge.","prepareRemoval":"Prepare removal","confirm":"Confirm","removalWarningStart":"Note: this disables automatic re-adding for ","removalWarningEnd":". The existing accessory remains. Click Confirm again to proceed.","noBewaveConfigShort":"BE WAVE configuration missing","removalSuccess":"Automatic adding disabled. Now remove the accessory in Homebridge.","removalPrepared":"Removal prepared","noAlarmsDuring":"No alarm groups received during discovery.","fullArm":"Full Arm","alarmsFoundSuffix":" devices and ","alarmsFoundEnd":" alarm groups found.","settingsChecking":"Checking settings...","noDevicesSave":"No devices to save","invalidIndex":"Invalid device index","devicePrefix":"Device ","deviceNoName":" has no name","missingHomekitSelection":"HomeKit selection missing for device ","deviceChanges":"Device changes ready. Click SAVE to save.","saveFailure":"Save failed: ","notAssigned":"Not assigned","notDiscovered":" (not discovered)","duplicateAlarm":"Choose different alarm groups for Home, Away and Night.","undiscoveredAlarm":"A selected alarm group was not discovered. Sync again before saving.","savingSecurity":"Saving security settings...","alarmChanges":"Alarm group changes ready. Click SAVE to save.","genericError":"Error: ","statusLabel":"Status: ","connectionUnavailable":"No configuration"},"nl":{"language":"Taal","connectionStatus":"Verbindingsstatus","broker":"MQTT Broker","hybrid":"BE WAVE Hybrid","online":"Online","offline":"Offline","unknown":"Onbekend","checking":"Controleren...","connected":"Verbonden","disconnected":"Niet verbonden","testConnection":"MQTT-verbinding testen","connectionSuccessful":"MQTT-verbinding geslaagd.","connectionFailed":"MQTT-verbinding mislukt.","devicesTitle":"BE WAVE apparaten","discoverDescription":"Ontdek apparaten en alarmgroepen via MQTT.","discover":"BE WAVE apparaten zoeken","searching":"Apparaten zoeken...","discoveryCompleted":"Zoekactie afgerond.","devices":"Apparaten","device":"Apparaat","searchDevices":"Zoek apparaat, index of type...","noDevices":"Geen apparaten gevonden.","notAdded":"Niet toegevoegd","selected":"Geselecteerd","registered":"Geregistreerd","alarmGroups":"Alarmgroepen","securityConfiguration":"Beveiliging configureren","securityDescription":"Koppel een BE WAVE-alarmgroep aan iedere HomeKit-modus.","home":"Thuis","away":"Weg","night":"Nacht","save":"Opslaan","cancel":"Annuleren","settings":"Instellingen","status":"Status","error":"Fout","loading":"Laden...","notAvailable":"Niet beschikbaar","productDescription":"Configuratie en beheer van de BE WAVE HomeKit-integratie","mqttConnection":"MQTT-verbinding","username":"Gebruikersnaam","statusTopic":"Status topic","commandTopic":"Command topic","mqttPassword":"MQTT wachtwoord","passwordEnter":"Voer het MQTT-wachtwoord in","passwordKeep":"Leeg laten om het huidige wachtwoord te behouden","homekitFeatures":"HomeKit-functionaliteit","loadingConfig":"Configuratie laden...","checkingHomebridge":"Verbinding met Homebridge controleren...","connectionTestRunning":"MQTT-verbinding testen...","connectionError":"Verbindingsfout: ","configChanges":"Wijzigingen gemaakt. Druk rechtsonder op SAVE om op te slaan.","configError":"Configuratiefout: ","noConfigSaved":"Nog geen configuratie opgeslagen.","enterMqtt":"Vul de MQTT-gegevens in en sla ze op.","scenes":"Scènes","virtualDevices":"Virtuele apparaten","securitySystem":"Beveiligingssysteem","enabled":"Ingeschakeld","disabled":"Uitgeschakeld","configLoaded":"Configuratie succesvol ingelezen.","configLoadError":"Fout bij laden configuratie: ","notSearchedDevices":"Nog geen apparaten gezocht.","notSearchedAlarms":"Nog geen alarmgroepen gezocht.","discoverBusy":"Be Wave apparaten zoeken (maximaal 8 seconden)...","noBewaveConfig":"Geen BE WAVE-configuratie gevonden","mqttDiscoverOK":"MQTT verbonden. Zoekactie afgerond.","mqttDiscoverNo":"MQTT niet verbonden.","noDevicesDuring":"Geen apparaten ontvangen tijdens de zoekactie.","unsupported":"Niet ondersteund","homekitName":"Naam in HomeKit","useHomekit":"Gebruiken in HomeKit","registeredExplanation":"Dit apparaat is geregistreerd. Verwijderen kan via Homebridge bij de individuele accessoires.","unsupportedExplanation":"Dit apparaattype wordt nog niet ondersteund door de Homebridge BE WAVE-plugin.","addExplanation":"Vink aan en sla de instellingen op om dit apparaat na een Homebridge-herstart toe te voegen.","prepareRemoval":"Verwijdering voorbereiden","confirm":"Bevestigen","removalWarningStart":"Let op: hiermee schakel je automatisch opnieuw toevoegen uit voor ","removalWarningEnd":". Het bestaande accessoire blijft aanwezig. Klik nogmaals op Bevestigen om door te gaan.","noBewaveConfigShort":"BE WAVE-configuratie ontbreekt","removalSuccess":"Automatisch toevoegen uitgeschakeld. Verwijder het accessoire nu via Homebridge.","removalPrepared":"Verwijdering voorbereid","noAlarmsDuring":"Geen alarmgroepen ontvangen tijdens de zoekactie.","fullArm":"Volledig Beveiligen","alarmsFoundSuffix":" apparaten en ","alarmsFoundEnd":" alarmgroepen gevonden.","settingsChecking":"Instellingen controleren...","noDevicesSave":"Geen apparaten om op te slaan","invalidIndex":"Ongeldige apparaatindex","devicePrefix":"Apparaat ","deviceNoName":" heeft geen naam","missingHomekitSelection":"HomeKit-selectie ontbreekt voor apparaat ","deviceChanges":"Apparaatwijzigingen klaar. Klik op SAVE om op te slaan.","saveFailure":"Opslaan mislukt: ","notAssigned":"Niet toegewezen","notDiscovered":" (niet ontdekt)","duplicateAlarm":"Kies verschillende alarmgroepen voor Thuis, Weg en Nacht.","undiscoveredAlarm":"Een geselecteerde alarmgroep is niet ontdekt. Synchroniseer opnieuw voordat je opslaat.","savingSecurity":"Beveiligingsinstellingen opslaan...","alarmChanges":"Alarmgroepwijzigingen klaar. Klik op SAVE om op te slaan.","genericError":"Fout: ","statusLabel":"Status: ","connectionUnavailable":"Geen configuratie"},"fr":{"language":"Langue","connectionStatus":"État de la connexion","broker":"Broker MQTT","hybrid":"BE WAVE Hybrid","online":"En ligne","offline":"Hors ligne","unknown":"Inconnu","checking":"Vérification...","connected":"Connecté","disconnected":"Déconnecté","testConnection":"Tester la connexion MQTT","connectionSuccessful":"Connexion MQTT réussie.","connectionFailed":"Échec de la connexion MQTT.","devicesTitle":"Appareils BE WAVE","discoverDescription":"Découvrir les appareils et les groupes d'alarme via MQTT.","discover":"Rechercher les appareils BE WAVE","searching":"Recherche des appareils...","discoveryCompleted":"Recherche terminée.","devices":"Appareils","device":"Appareil","searchDevices":"Rechercher par nom, index ou type...","noDevices":"Aucun appareil trouvé.","notAdded":"Non ajouté","selected":"Sélectionné","registered":"Enregistré","alarmGroups":"Groupes d'alarme","securityConfiguration":"Configurer la sécurité","securityDescription":"Associer un groupe d'alarme BE WAVE à chaque mode HomeKit.","home":"À domicile","away":"Absent","night":"Nuit","save":"Enregistrer","cancel":"Annuler","settings":"Paramètres","status":"État","error":"Erreur","loading":"Chargement...","notAvailable":"Indisponible","productDescription":"Configuration et gestion de l’intégration HomeKit BE WAVE","mqttConnection":"Connexion MQTT","username":"Nom d’utilisateur","statusTopic":"Sujet de statut","commandTopic":"Sujet de commande","mqttPassword":"Mot de passe MQTT","passwordEnter":"Saisissez le mot de passe MQTT","passwordKeep":"Laissez vide pour conserver le mot de passe actuel","homekitFeatures":"Fonctionnalités HomeKit","loadingConfig":"Chargement de la configuration...","checkingHomebridge":"Vérification de la connexion à Homebridge...","connectionTestRunning":"Test de la connexion MQTT...","connectionError":"Erreur de connexion : ","configChanges":"Modifications effectuées. Cliquez sur SAVE en bas à droite pour enregistrer.","configError":"Erreur de configuration : ","noConfigSaved":"Aucune configuration enregistrée.","enterMqtt":"Saisissez les paramètres MQTT et enregistrez-les.","scenes":"Scènes","virtualDevices":"Appareils virtuels","securitySystem":"Système de sécurité","enabled":"Activé","disabled":"Désactivé","configLoaded":"Configuration chargée avec succès.","configLoadError":"Erreur lors du chargement de la configuration : ","notSearchedDevices":"Aucune recherche d’appareils effectuée.","notSearchedAlarms":"Aucune recherche de groupes d’alarme effectuée.","discoverBusy":"Recherche des appareils BE WAVE (8 secondes maximum)...","noBewaveConfig":"Configuration BE WAVE introuvable","mqttDiscoverOK":"MQTT connecté. Recherche terminée.","mqttDiscoverNo":"MQTT non connecté.","noDevicesDuring":"Aucun appareil reçu pendant la recherche.","unsupported":"Non pris en charge","homekitName":"Nom dans HomeKit","useHomekit":"Utiliser dans HomeKit","registeredExplanation":"Cet appareil est enregistré. Supprimez-le dans les accessoires individuels de Homebridge.","unsupportedExplanation":"Ce type d’appareil n’est pas encore pris en charge par le plugin Homebridge BE WAVE.","addExplanation":"Cochez et enregistrez les paramètres pour ajouter cet appareil après le redémarrage de Homebridge.","prepareRemoval":"Préparer la suppression","confirm":"Confirmer","removalWarningStart":"Attention : cela désactive le réajout automatique de ","removalWarningEnd":". L’accessoire existant reste présent. Cliquez à nouveau sur Confirmer pour continuer.","noBewaveConfigShort":"Configuration BE WAVE manquante","removalSuccess":"Ajout automatique désactivé. Supprimez maintenant l’accessoire dans Homebridge.","removalPrepared":"Suppression préparée","noAlarmsDuring":"Aucun groupe d’alarme reçu pendant la recherche.","fullArm":"Armement total","alarmsFoundSuffix":" appareils et ","alarmsFoundEnd":" groupes d’alarme trouvés.","settingsChecking":"Vérification des paramètres...","noDevicesSave":"Aucun appareil à enregistrer","invalidIndex":"Index d’appareil invalide","devicePrefix":"Appareil ","deviceNoName":" n’a pas de nom","missingHomekitSelection":"Sélection HomeKit manquante pour l’appareil ","deviceChanges":"Modifications des appareils prêtes. Cliquez sur SAVE pour enregistrer.","saveFailure":"Échec de l’enregistrement : ","notAssigned":"Non attribué","notDiscovered":" (non découvert)","duplicateAlarm":"Choisissez des groupes d’alarme différents pour Domicile, Absent et Nuit.","undiscoveredAlarm":"Un groupe d’alarme sélectionné n’a pas été découvert. Synchronisez à nouveau avant d’enregistrer.","savingSecurity":"Enregistrement des paramètres de sécurité...","alarmChanges":"Modifications des groupes d’alarme prêtes. Cliquez sur SAVE pour enregistrer.","genericError":"Erreur : ","statusLabel":"État : ","connectionUnavailable":"Aucune configuration"},"de":{"language":"Sprache","connectionStatus":"Verbindungsstatus","broker":"MQTT-Broker","hybrid":"BE WAVE Hybrid","online":"Online","offline":"Offline","unknown":"Unbekannt","checking":"Wird geprüft...","connected":"Verbunden","disconnected":"Nicht verbunden","testConnection":"MQTT-Verbindung testen","connectionSuccessful":"MQTT-Verbindung erfolgreich.","connectionFailed":"MQTT-Verbindung fehlgeschlagen.","devicesTitle":"BE WAVE Geräte","discoverDescription":"Geräte und Alarmgruppen über MQTT erkennen.","discover":"BE WAVE Geräte suchen","searching":"Geräte werden gesucht...","discoveryCompleted":"Suche abgeschlossen.","devices":"Geräte","device":"Gerät","searchDevices":"Gerät, Index oder Typ suchen...","noDevices":"Keine Geräte gefunden.","notAdded":"Nicht hinzugefügt","selected":"Ausgewählt","registered":"Registriert","alarmGroups":"Alarmgruppen","securityConfiguration":"Sicherheit konfigurieren","securityDescription":"Weisen Sie jedem HomeKit-Modus eine BE WAVE-Alarmgruppe zu.","home":"Zuhause","away":"Abwesend","night":"Nacht","save":"Speichern","cancel":"Abbrechen","settings":"Einstellungen","status":"Status","error":"Fehler","loading":"Wird geladen...","notAvailable":"Nicht verfügbar","productDescription":"BE WAVE HomeKit-Integration konfigurieren und verwalten","mqttConnection":"MQTT-Verbindung","username":"Benutzername","statusTopic":"Status-Topic","commandTopic":"Befehls-Topic","mqttPassword":"MQTT-Passwort","passwordEnter":"MQTT-Passwort eingeben","passwordKeep":"Leer lassen, um das aktuelle Passwort beizubehalten","homekitFeatures":"HomeKit-Funktionen","loadingConfig":"Konfiguration wird geladen...","checkingHomebridge":"Homebridge-Verbindung wird geprüft...","connectionTestRunning":"MQTT-Verbindung wird getestet...","connectionError":"Verbindungsfehler: ","configChanges":"Änderungen vorgenommen. Unten rechts auf SAVE klicken, um zu speichern.","configError":"Konfigurationsfehler: ","noConfigSaved":"Noch keine Konfiguration gespeichert.","enterMqtt":"MQTT-Daten eingeben und speichern.","scenes":"Szenen","virtualDevices":"Virtuelle Geräte","securitySystem":"Sicherheitssystem","enabled":"Aktiviert","disabled":"Deaktiviert","configLoaded":"Konfiguration erfolgreich geladen.","configLoadError":"Fehler beim Laden der Konfiguration: ","notSearchedDevices":"Noch keine Gerätesuche durchgeführt.","notSearchedAlarms":"Noch keine Alarmgruppen gesucht.","discoverBusy":"BE WAVE Geräte werden gesucht (bis zu 8 Sekunden)...","noBewaveConfig":"Keine BE WAVE-Konfiguration gefunden","mqttDiscoverOK":"MQTT verbunden. Suche abgeschlossen.","mqttDiscoverNo":"MQTT nicht verbunden.","noDevicesDuring":"Bei der Suche wurden keine Geräte empfangen.","unsupported":"Nicht unterstützt","homekitName":"Name in HomeKit","useHomekit":"In HomeKit verwenden","registeredExplanation":"Dieses Gerät ist registriert. Entfernen Sie es in Homebridge unter den einzelnen Geräten.","unsupportedExplanation":"Dieser Gerätetyp wird vom Homebridge BE WAVE Plugin noch nicht unterstützt.","addExplanation":"Auswählen und Einstellungen speichern, um dieses Gerät nach einem Homebridge-Neustart hinzuzufügen.","prepareRemoval":"Entfernung vorbereiten","confirm":"Bestätigen","removalWarningStart":"Hinweis: Damit wird das automatische erneute Hinzufügen deaktiviert für ","removalWarningEnd":". Das vorhandene Gerät bleibt bestehen. Zum Fortfahren erneut auf Bestätigen klicken.","noBewaveConfigShort":"BE WAVE-Konfiguration fehlt","removalSuccess":"Automatisches Hinzufügen deaktiviert. Entfernen Sie das Gerät jetzt in Homebridge.","removalPrepared":"Entfernung vorbereitet","noAlarmsDuring":"Bei der Suche wurden keine Alarmgruppen empfangen.","fullArm":"Vollständig scharf","alarmsFoundSuffix":" Geräte und ","alarmsFoundEnd":" Alarmgruppen gefunden.","settingsChecking":"Einstellungen werden geprüft...","noDevicesSave":"Keine Geräte zum Speichern","invalidIndex":"Ungültiger Geräteindex","devicePrefix":"Gerät ","deviceNoName":" hat keinen Namen","missingHomekitSelection":"HomeKit-Auswahl fehlt für Gerät ","deviceChanges":"Geräteänderungen vorbereitet. Zum Speichern auf SAVE klicken.","saveFailure":"Speichern fehlgeschlagen: ","notAssigned":"Nicht zugewiesen","notDiscovered":" (nicht erkannt)","duplicateAlarm":"Wählen Sie unterschiedliche Alarmgruppen für Zuhause, Abwesend und Nacht.","undiscoveredAlarm":"Eine ausgewählte Alarmgruppe wurde nicht erkannt. Vor dem Speichern erneut synchronisieren.","savingSecurity":"Sicherheitseinstellungen werden gespeichert...","alarmChanges":"Änderungen an Alarmgruppen vorbereitet. Zum Speichern auf SAVE klicken.","genericError":"Fehler: ","statusLabel":"Status: ","connectionUnavailable":"Keine Konfiguration"},"pl":{"language":"Język","connectionStatus":"Stan połączenia","broker":"Broker MQTT","hybrid":"BE WAVE Hybrid","online":"Online","offline":"Offline","unknown":"Nieznany","checking":"Sprawdzanie...","connected":"Połączono","disconnected":"Rozłączono","testConnection":"Testuj połączenie MQTT","connectionSuccessful":"Połączenie MQTT udane.","connectionFailed":"Połączenie MQTT nie powiodło się.","devicesTitle":"Urządzenia BE WAVE","discoverDescription":"Wykryj urządzenia i grupy alarmowe przez MQTT.","discover":"Wyszukaj urządzenia BE WAVE","searching":"Wyszukiwanie urządzeń...","discoveryCompleted":"Wyszukiwanie zakończone.","devices":"Urządzenia","device":"Urządzenie","searchDevices":"Szukaj urządzenia, indeksu lub typu...","noDevices":"Nie znaleziono urządzeń.","notAdded":"Nie dodano","selected":"Wybrano","registered":"Zarejestrowano","alarmGroups":"Grupy alarmowe","securityConfiguration":"Konfiguracja zabezpieczeń","securityDescription":"Przypisz grupę alarmową BE WAVE do każdego trybu HomeKit.","home":"W domu","away":"Poza domem","night":"Noc","save":"Zapisz","cancel":"Anuluj","settings":"Ustawienia","status":"Stan","error":"Błąd","loading":"Ładowanie...","notAvailable":"Niedostępne","productDescription":"Konfiguracja i zarządzanie integracją BE WAVE z HomeKit","mqttConnection":"Połączenie MQTT","username":"Nazwa użytkownika","statusTopic":"Temat statusu","commandTopic":"Temat poleceń","mqttPassword":"Hasło MQTT","passwordEnter":"Wprowadź hasło MQTT","passwordKeep":"Pozostaw puste, aby zachować obecne hasło","homekitFeatures":"Funkcje HomeKit","loadingConfig":"Ładowanie konfiguracji...","checkingHomebridge":"Sprawdzanie połączenia z Homebridge...","connectionTestRunning":"Testowanie połączenia MQTT...","connectionError":"Błąd połączenia: ","configChanges":"Wprowadzono zmiany. Kliknij SAVE w prawym dolnym rogu, aby zapisać.","configError":"Błąd konfiguracji: ","noConfigSaved":"Nie zapisano jeszcze konfiguracji.","enterMqtt":"Wprowadź dane MQTT i zapisz je.","scenes":"Sceny","virtualDevices":"Urządzenia wirtualne","securitySystem":"System alarmowy","enabled":"Włączone","disabled":"Wyłączone","configLoaded":"Konfiguracja została wczytana.","configLoadError":"Błąd wczytywania konfiguracji: ","notSearchedDevices":"Nie wyszukiwano jeszcze urządzeń.","notSearchedAlarms":"Nie wyszukiwano jeszcze grup alarmowych.","discoverBusy":"Wyszukiwanie urządzeń BE WAVE (do 8 sekund)...","noBewaveConfig":"Nie znaleziono konfiguracji BE WAVE","mqttDiscoverOK":"MQTT połączony. Wyszukiwanie zakończone.","mqttDiscoverNo":"Brak połączenia MQTT.","noDevicesDuring":"Nie odebrano urządzeń podczas wyszukiwania.","unsupported":"Nieobsługiwane","homekitName":"Nazwa w HomeKit","useHomekit":"Używaj w HomeKit","registeredExplanation":"To urządzenie jest zarejestrowane. Usuń je w Homebridge w sekcji poszczególnych akcesoriów.","unsupportedExplanation":"Ten typ urządzenia nie jest jeszcze obsługiwany przez wtyczkę Homebridge BE WAVE.","addExplanation":"Zaznacz i zapisz ustawienia, aby dodać urządzenie po ponownym uruchomieniu Homebridge.","prepareRemoval":"Przygotuj usunięcie","confirm":"Potwierdź","removalWarningStart":"Uwaga: wyłącza to automatyczne ponowne dodawanie urządzenia ","removalWarningEnd":". Istniejące akcesorium pozostanie. Kliknij Potwierdź ponownie, aby kontynuować.","noBewaveConfigShort":"Brak konfiguracji BE WAVE","removalSuccess":"Wyłączono automatyczne dodawanie. Teraz usuń akcesorium w Homebridge.","removalPrepared":"Przygotowano usunięcie","noAlarmsDuring":"Nie odebrano grup alarmowych podczas wyszukiwania.","fullArm":"Pełne uzbrojenie","alarmsFoundSuffix":" urządzeń i ","alarmsFoundEnd":" grup alarmowych znaleziono.","settingsChecking":"Sprawdzanie ustawień...","noDevicesSave":"Brak urządzeń do zapisania","invalidIndex":"Nieprawidłowy indeks urządzenia","devicePrefix":"Urządzenie ","deviceNoName":" nie ma nazwy","missingHomekitSelection":"Brak wyboru HomeKit dla urządzenia ","deviceChanges":"Zmiany urządzeń gotowe. Kliknij SAVE, aby zapisać.","saveFailure":"Nie udało się zapisać: ","notAssigned":"Nieprzypisane","notDiscovered":" (nie wykryto)","duplicateAlarm":"Wybierz różne grupy alarmowe dla trybów W domu, Poza domem i Noc.","undiscoveredAlarm":"Wybrana grupa alarmowa nie została wykryta. Zsynchronizuj ponownie przed zapisaniem.","savingSecurity":"Zapisywanie ustawień zabezpieczeń...","alarmChanges":"Zmiany grup alarmowych gotowe. Kliknij SAVE, aby zapisać.","genericError":"Błąd: ","statusLabel":"Status: ","connectionUnavailable":"Brak konfiguracji"}};
+const bwLanguageSelect = document.getElementById('languageSelect');
+
+function bwTranslate(key) {
+  const lang = bwLanguageSelect.value;
+  return bwTranslations[lang]?.[key]
+    || bwTranslations.en?.[key]
+    || key;
+}
+
+function applyBwLanguage(lang) {
+  if (!bwTranslations[lang]) lang = 'en';
+
+  bwLanguageSelect.value = lang;
+  document.documentElement.lang = lang;
+  document.getElementById('languageLabel').textContent =
+  bwTranslate('language') + ':';
+
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    element.textContent = bwTranslate(element.dataset.i18n);
+  });
+
+  const search = document.getElementById('deviceSearch');
+  if (search) search.placeholder = bwTranslate('searchDevices');
+
+  const test = document.getElementById('saveBrokerSettings');
+  if (test) test.textContent = bwTranslate('testConnection');
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = bwTranslate(el.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll('[data-status-state]').forEach(el => {
+    const state = el.dataset.statusState;
+    el.textContent = '● ' + el.dataset.statusName + ': ' + bwTranslate(state);
+  });
+
+  localStorage.setItem('bewave-ui-language', lang);
+}
+
+if (bwLanguageSelect) {
+  bwLanguageSelect.addEventListener('change', event => {
+    applyBwLanguage(event.target.value);
+  });
+
+  applyBwLanguage(
+    localStorage.getItem('bewave-ui-language') || 'nl'
+  );
+}
+</script>
+

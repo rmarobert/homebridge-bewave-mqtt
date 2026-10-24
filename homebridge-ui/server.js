@@ -35,6 +35,84 @@ class BeWaveUiServer extends HomebridgePluginUiServer {
       });
     });
 
+
+    this.onRequest('/connection-status', async (config) => {
+      if (!config?.brokerUrl ||
+          !/^mqtts?:\/\//.test(config.brokerUrl)) {
+        return { brokerOnline: false, hybridOnline: null };
+      }
+
+      return new Promise((resolve) => {
+        const client = mqtt.connect(config.brokerUrl, {
+          username: config.username || undefined,
+          password: config.password || undefined,
+          reconnectPeriod: 0,
+          connectTimeout: 5000,
+          clientId: 'bewave-ui-status-' +
+            Math.random().toString(16).slice(2),
+        });
+
+        const statusPrefix = config.statusPrefix ||
+          'bewave/status';
+        const commandPrefix = config.commandPrefix ||
+          'bewave/command';
+        const statusTopic = `${statusPrefix}/system/tx`;
+        let brokerOnline = false;
+        let finished = false;
+        let timer;
+
+        const finish = (hybridOnline, name) => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          client.end(true);
+          resolve({ brokerOnline, hybridOnline, name });
+        };
+
+        timer = setTimeout(() => {
+          finish(brokerOnline ? false : null);
+        }, 6000);
+
+        client.on('connect', () => {
+          brokerOnline = true;
+          client.subscribe(statusTopic, (error, granted) => {
+            if (error || !granted?.length ||
+                granted[0].qos === 128) {
+              finish(null);
+              return;
+            }
+
+            client.publish(
+              `${commandPrefix}/system/rx`,
+              JSON.stringify({ action: 'SYNC' }),
+              { qos: 0, retain: false },
+              error => {
+                if (error) finish(null);
+              }
+            );
+          });
+        });
+
+        client.on('message', (topic, payload, packet) => {
+          if (topic !== statusTopic || packet.retain) return;
+          try {
+            const data = JSON.parse(payload.toString());
+            if (data.type === 'hub' &&
+                typeof data.mac === 'string') {
+              finish(true, String(data.name || 'BE WAVE Hybrid'));
+            }
+          } catch {
+            // Ongeldig statusbericht negeren.
+          }
+        });
+
+        client.on('error', () => finish(null));
+        client.on('close', () => {
+          if (!finished) finish(null);
+        });
+      });
+    });
+
     this.onRequest('/discover', async (config) => {
       return this.discover(config, false);
     });
@@ -43,17 +121,23 @@ class BeWaveUiServer extends HomebridgePluginUiServer {
       return this.discover(config, true);
     });
 
-    this.onRequest('/registered-devices', async () => {
+    this.onRequest('/registered-devices', async (config) => {
       const fs = require('node:fs/promises');
       const path = require('node:path');
 
       const storagePath = this.homebridgeStoragePath;
 
-      const cachePath = path.join(
-        storagePath,
-        'accessories',
-        'cachedAccessories'
-      );
+     const bridgeId = config?._bridge?.username
+     ?.replace(/:/g, '')
+     ?.toUpperCase();
+     
+    const cachePath = path.join(
+    storagePath,
+    'accessories',
+    bridgeId
+    ? `cachedAccessories.${bridgeId}`
+    : 'cachedAccessories'
+    );
 
       const raw = await fs.readFile(cachePath, 'utf8');
       const cached = JSON.parse(raw);
