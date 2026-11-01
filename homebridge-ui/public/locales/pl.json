@@ -95,7 +95,7 @@
   "saveFailure": "Nie udało się zapisać: ",
   "notAssigned": "Nieprzypisane",
   "notDiscovered": " (nie wykryto)",
-  "duplicateAlarm": "Wybierz różne grupy alarmowe dla trybów W domu, Poza domem i Noc.",
+  "duplicateAlarm": "Nie zastosowano zmiany: wybierz różne grupy alarmowe dla trybów W domu, Poza domem i Noc. Przywrócono poprzedni wybór.",
   "undiscoveredAlarm": "Wybrana grupa alarmowa nie została wykryta. Zsynchronizuj ponownie przed zapisaniem.",
   "savingSecurity": "Zapisywanie ustawień zabezpieczeń...",
   "alarmChanges": "Zmiany grup alarmowych gotowe. Kliknij SAVE, aby zapisać.",

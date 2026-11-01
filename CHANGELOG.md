@@ -3,6 +3,7 @@
 ## [1.0.12] - Unreleased
 
 ### Fixed
+- Immediately restore the previous alarm mapping after duplicate or undiscovered group selections, and after configuration update failures. Show a clear error instead of leaving an unsaved selection visible next to the global SAVE button.
 - Ignore retained alarm snapshots when validating current alarm state.
 - Probe the BE WAVE Hybrid every 60 seconds using SYNC; require a live hub reply within 15 seconds. Mark alarm status unavailable and invalidate groups when the hub stops responding, even while the broker remains online.
 - Reject commands when the broker or Hybrid is unavailable; await MQTT publishing and propagate errors, disconnects and a 5-second timeout to HomeKit.

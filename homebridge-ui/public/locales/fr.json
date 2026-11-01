@@ -95,7 +95,7 @@
   "saveFailure": "Échec de l’enregistrement : ",
   "notAssigned": "Non attribué",
   "notDiscovered": " (non découvert)",
-  "duplicateAlarm": "Choisissez des groupes d’alarme différents pour Domicile, Absent et Nuit.",
+  "duplicateAlarm": "Modification non appliquée : choisissez des groupes différents pour Domicile, Absent et Nuit. La sélection précédente a été rétablie.",
   "undiscoveredAlarm": "Un groupe d’alarme sélectionné n’a pas été découvert. Synchronisez à nouveau avant d’enregistrer.",
   "savingSecurity": "Enregistrement des paramètres de sécurité...",
   "alarmChanges": "Modifications des groupes d’alarme prêtes. Cliquez sur SAVE pour enregistrer.",

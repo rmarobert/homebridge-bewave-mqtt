@@ -95,7 +95,7 @@
   "saveFailure": "Save failed: ",
   "notAssigned": "Not assigned",
   "notDiscovered": " (not discovered)",
-  "duplicateAlarm": "Choose different alarm groups for Home, Away and Night.",
+  "duplicateAlarm": "Change not applied: choose different alarm groups for Home, Away and Night. The previous selection has been restored.",
   "undiscoveredAlarm": "A selected alarm group was not discovered. Sync again before saving.",
   "savingSecurity": "Saving security settings...",
   "alarmChanges": "Alarm group changes ready. Click SAVE to save.",
