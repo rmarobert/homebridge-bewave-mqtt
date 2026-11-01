@@ -87,13 +87,13 @@ export function setupSlimPirLunaAccessory(
 
     lightService
       .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(value => {
+      .onSet(async value => {
         const topic =
           `${platform.config.commandPrefix || 'bewave/command'}/devices/${index}/rx`;
 
-        platform.mqttClient?.publish(
+        await platform.sendCommand(
           topic,
-          JSON.stringify({ on_off: value ? 1 : 0 }),
+          { on_off: value ? 1 : 0 },
         );
 
         platform.log.info(
@@ -102,3 +102,4 @@ export function setupSlimPirLunaAccessory(
       });
   }
 }
+

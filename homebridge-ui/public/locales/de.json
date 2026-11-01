@@ -95,7 +95,7 @@
   "saveFailure": "Speichern fehlgeschlagen: ",
   "notAssigned": "Nicht zugewiesen",
   "notDiscovered": " (nicht erkannt)",
-  "duplicateAlarm": "Wählen Sie unterschiedliche Alarmgruppen für Zuhause, Abwesend und Nacht.",
+  "duplicateAlarm": "Änderung nicht übernommen: Wählen Sie unterschiedliche Alarmgruppen für Zuhause, Abwesend und Nacht. Die vorherige Auswahl wurde wiederhergestellt.",
   "undiscoveredAlarm": "Eine ausgewählte Alarmgruppe wurde nicht erkannt. Vor dem Speichern erneut synchronisieren.",
   "savingSecurity": "Sicherheitseinstellungen werden gespeichert...",
   "alarmChanges": "Änderungen an Alarmgruppen vorbereitet. Zum Speichern auf SAVE klicken.",

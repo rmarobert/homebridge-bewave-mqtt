@@ -106,6 +106,10 @@ export class BeWaveAlarm {
     this.updateHomeKit();
   }
 
+  public refreshStatus(): void {
+    this.updateHomeKit();
+  }
+
   // ========================================
   // HOMEKIT ACCESSOIRE
   // ========================================
@@ -346,20 +350,7 @@ export class BeWaveAlarm {
     const topic =
       `${prefix}/alarms/${group.topicName}/rx`;
 
-    await new Promise<void>((resolve, reject) => {
-      client.publish(
-        topic,
-        JSON.stringify({ action }),
-        { qos: 1, retain: false },
-        error => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        },
-      );
-    });
+    await this.platform.sendCommand(topic, { action });
 
     this.platform.log.info(
       `MQTT ${action} gepubliceerd naar ${topic}`,
@@ -405,7 +396,7 @@ export class BeWaveAlarm {
   }
 
   private resolveState(): number | undefined {
-    if (!this.platform.mqttClient?.connected) {
+    if (!this.platform.mqttClient?.connected || !this.platform.hubMonitor.online) {
       return undefined;
     }
 
@@ -505,3 +496,4 @@ export class BeWaveAlarm {
     );
   }
 }
+

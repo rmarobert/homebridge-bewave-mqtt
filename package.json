@@ -1,7 +1,7 @@
 {
   "name": "homebridge-bewave-mqtt",
   "displayName": "SATEL BE WAVE - Apple HomeKit",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "BE WAVE (HYBRID) MQTT plugin voor HomeBridge",
   "main": "dist/index.js",
   "keywords": [
@@ -36,7 +36,8 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "build": "tsc && rm -rf dist/homebridge-ui && cp -R homebridge-ui dist/homebridge-ui && find dist/homebridge-ui -type f \\( -name \"*.bak\" -o -name \"*.bak2\" \\) -delete"
+    "build": "tsc && rm -rf dist/homebridge-ui && cp -R homebridge-ui dist/homebridge-ui && find dist/homebridge-ui -type f \\( -name \"*.bak\" -o -name \"*.bak2\" \\) -delete",
+    "test": "npm run build && node --test test/*.test.cjs"
   },
   "homebridge": {
     "platforms": [

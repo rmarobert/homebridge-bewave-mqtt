@@ -107,7 +107,9 @@ Functionality depends on the connected BE WAVE equipment and its configuration.
 
 The plugin provides HomeKit security system integration using BE WAVE alarm information.
 
-Alarm states are synchronized through MQTT. After MQTT disconnections, previously received alarm states are invalidated to reduce the risk of displaying outdated information.
+Alarm states are synchronized through MQTT. Retained alarm snapshots are ignored: a live group message is required after connection loss. The plugin checks the Hybrid with a SYNC request on connection and every 60 seconds, allowing 15 seconds for a live system reply (`type: "hub"` with a non-empty `mac`). If replies stop, the alarm becomes unavailable within approximately 75 seconds, even when the MQTT broker remains online. Recovery requires a live hub reply and fresh group statuses. The Hybrid must support these SYNC replies.
+
+Control commands require both a broker connection and a confirmed online Hybrid. Publishing errors, disconnects and a 5-second publishing timeout are reported to HomeKit. Commands use non-retained QoS 0 with offline queueing disabled, so old actions are not replayed after reconnection. A successful send confirms local MQTT publishing, not execution by the device; incoming status remains authoritative.
 
 This integration is intended for smart home convenience. Do not rely on Homebridge or Apple Home as the sole means of monitoring or controlling your security system.
 
@@ -162,3 +164,4 @@ This is an independent community project and is not officially affiliated with o
 ## License
 
 MIT
+

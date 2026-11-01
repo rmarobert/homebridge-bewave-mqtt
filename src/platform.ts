@@ -7,6 +7,8 @@ import {
 } from 'homebridge';
 
 import mqtt, { MqttClient } from 'mqtt';
+import { HubMonitor } from './hub-monitor';
+import { publishCommand } from './publish-command';
 
 // ================================
 // Importeer alle devices 
@@ -64,6 +66,19 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
   public readonly sceneAccessories = new Map<string, PlatformAccessory>();
   public readonly boundScenes = new Set<string>();
   public readonly alarm = new BeWaveAlarm(this);
+  private mqttSession = 0;
+  public readonly hubMonitor = new HubMonitor(
+    () => this.requestSync(),
+    online => {
+      if (!online) {
+        this.log.warn('BE WAVE centrale niet bereikbaar; alarmstatus ongeldig');
+        this.alarm.invalidateStatus();
+      } else {
+        this.log.info('BE WAVE centrale bereikbaar');
+        this.alarm.refreshStatus();
+      }
+    },
+  );
 
   constructor(
     public readonly log: Logger,
@@ -75,6 +90,34 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
       this.restoreCachedAccessories();
       this.connectMqtt();
     });
+    this.api.on('shutdown', () => {
+      this.mqttSession++;
+      this.hubMonitor.stop();
+      this.mqttClient?.end(true);
+    });
+  }
+
+  public async sendCommand(
+    topic: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    if (!this.hubMonitor.online) {
+      throw new this.api.hap.HapStatusError(-70402);
+    }
+    try {
+      await publishCommand(this.mqttClient, topic, payload);
+    } catch (error) {
+      this.log.error(`MQTT commando mislukt: ${String(error)}`);
+      throw new this.api.hap.HapStatusError(-70402);
+    }
+  }
+
+  private requestSync(): void {
+    const topic = `${this.config.commandPrefix || 'bewave/command'}/system/rx`;
+    void publishCommand(this.mqttClient, topic, { action: 'SYNC' })
+      .catch(error => {
+        this.log.error(`SYNC mislukt: ${String(error)}`);
+      });
   }
 
 configureAccessory(accessory: PlatformAccessory): void {
@@ -302,16 +345,18 @@ if (type === 'VIRTUAL_IP_DEVICE') {
     }
 
     const statusPrefix = this.config.statusPrefix || 'bewave/status';
-    const commandPrefix = this.config.commandPrefix || 'bewave/command';
 
     this.log.info(`Verbinden met MQTT broker: ${brokerUrl}`);
 
     this.mqttClient = mqtt.connect(brokerUrl, {
       username: this.config.username,
       password: this.config.password,
+      queueQoSZero: false,
     });
 
     this.mqttClient.on('connect', () => {
+      const session = ++this.mqttSession;
+      this.hubMonitor.stop();
       // Oude alarmstatussen pas vertrouwen na nieuwe MQTT-berichten.
       this.alarm.invalidateStatus();
       this.log.info('MQTT verbonden');
@@ -325,6 +370,7 @@ if (type === 'VIRTUAL_IP_DEVICE') {
 
       // Eerst alle MQTT-abonnementen bevestigen.
       this.mqttClient?.subscribe(topics, { qos: 0 }, (err, granted) => {
+        if (session !== this.mqttSession || !this.mqttClient?.connected) return;
         if (err || !granted ||
             granted.length !== topics.length ||
             granted.some(item => item.qos === 128)) {
@@ -336,31 +382,26 @@ if (type === 'VIRTUAL_IP_DEVICE') {
 
         this.log.info('MQTT status topics geactiveerd');
 
-        const syncTopic = `${commandPrefix}/system/rx`;
-
-        this.mqttClient?.publish(
-          syncTopic,
-          JSON.stringify({ action: 'SYNC' }),
-          { qos: 0, retain: false },
-          error => {
-            if (error) {
-              this.log.error(`SYNC mislukt: ${error.message}`);
-            } else {
-              this.log.info(`SYNC verstuurd naar ${syncTopic}`);
-            }
-          },
-        );
+        this.hubMonitor.start();
       });
     });
 
 
-this.mqttClient.on('message', (topic, payload) => {
+this.mqttClient.on('message', (topic, payload, packet) => {
   const message = payload.toString();
 
   this.log.debug(`MQTT RX ${topic}: ${message}`);
 
   try {
     const data = JSON.parse(message);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return;
+    }
+
+    if (topic === `${statusPrefix}/system/tx`) {
+      this.hubMonitor.receive(data, packet.retain);
+      return;
+    }
 
     if (topic.includes('/scenes/')) {
       const sceneMatch = topic.match(
@@ -386,6 +427,7 @@ this.mqttClient.on('message', (topic, payload) => {
     }
 
     if (topic.includes('/alarms/')) {
+    if (packet.retain) return;
     this.alarm.process(topic, data);
     return;
     }
@@ -399,6 +441,8 @@ this.mqttClient.on('message', (topic, payload) => {
 });
 
     this.mqttClient.on('offline', () => {
+      this.mqttSession++;
+      this.hubMonitor.stop();
       this.log.warn('MQTT verbinding verloren');
       this.alarm.invalidateStatus();
     });
@@ -408,6 +452,8 @@ this.mqttClient.on('message', (topic, payload) => {
     });
 
     this.mqttClient.on('close', () => {
+      this.mqttSession++;
+      this.hubMonitor.stop();
       this.log.warn('MQTT verbinding gesloten');
       this.alarm.invalidateStatus();
     });
@@ -525,3 +571,4 @@ if (accessory) {
 }
  }
 }
+

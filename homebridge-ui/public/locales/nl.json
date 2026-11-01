@@ -95,7 +95,7 @@
   "saveFailure": "Opslaan mislukt: ",
   "notAssigned": "Niet toegewezen",
   "notDiscovered": " (niet ontdekt)",
-  "duplicateAlarm": "Kies verschillende alarmgroepen voor Thuis, Weg en Nacht.",
+  "duplicateAlarm": "Wijziging niet toegepast: kies verschillende alarmgroepen voor Thuis, Weg en Nacht. De vorige keuze is teruggezet.",
   "undiscoveredAlarm": "Een geselecteerde alarmgroep is niet ontdekt. Synchroniseer opnieuw voordat je opslaat.",
   "savingSecurity": "Beveiligingsinstellingen opslaan...",
   "alarmChanges": "Alarmgroepwijzigingen klaar. Klik op SAVE om op te slaan.",

@@ -198,14 +198,14 @@ parentalControlService
       .getCharacteristic(
         platform.api.hap.Characteristic.TargetTemperature,
       )
-      .onSet(value => {
+      .onSet(async value => {
         const temperature = Number(value);
 
-        platform.mqttClient?.publish(
+        await platform.sendCommand(
           commandTopic,
-          JSON.stringify({
+          {
             heater_forced_value: temperature,
-          }),
+          },
         );
 
         platform.log.info(
@@ -216,12 +216,12 @@ parentalControlService
     // Boost aan/uit
     boostService
       .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(value => {
-        platform.mqttClient?.publish(
+      .onSet(async value => {
+        await platform.sendCommand(
           commandTopic,
-          JSON.stringify({
+          {
             heater_boost: value ? 1 : 0,
-          }),
+          },
         );
 
         platform.log.info(
@@ -232,12 +232,12 @@ parentalControlService
     // Kinderslot aan/uit
     parentalControlService
       .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(value => {
-        platform.mqttClient?.publish(
+      .onSet(async value => {
+        await platform.sendCommand(
           commandTopic,
-          JSON.stringify({
+          {
             heater_parental_control: value ? 1 : 0,
-          }),
+          },
         );
 
         platform.log.info(
@@ -246,3 +246,4 @@ parentalControlService
       });
   }
 }
+
