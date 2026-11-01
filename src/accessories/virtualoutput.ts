@@ -57,12 +57,12 @@ export function setupVirtualOutputAccessory(
 
     switchService
       .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(value => {
-        platform.mqttClient?.publish(
+      .onSet(async value => {
+        await platform.sendCommand(
           commandTopic,
-          JSON.stringify({
+          {
             on_off: value ? 1 : 0,
-          }),
+          },
         );
 
         platform.log.info(
@@ -71,3 +71,4 @@ export function setupVirtualOutputAccessory(
       });
   }
 }
+

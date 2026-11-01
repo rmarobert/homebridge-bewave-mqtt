@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.12] - Unreleased
+
+### Fixed
+- Ignore retained alarm snapshots when validating current alarm state.
+- Probe the BE WAVE Hybrid every 60 seconds using SYNC; require a live hub reply within 15 seconds. Mark alarm status unavailable and invalidate groups when the hub stops responding, even while the broker remains online.
+- Reject commands when the broker or Hybrid is unavailable; await MQTT publishing and propagate errors, disconnects and a 5-second timeout to HomeKit.
+- Disable offline command queueing and use non-retained QoS 0 commands, including alarm commands, to avoid replaying old actions after reconnection. A successful publish is not confirmation of execution by the device.
+- Stop monitoring timers and close MQTT connections when Homebridge shuts down.
+
+### Tests
+- Add regression coverage for retained messages, hub loss and recovery, reconnects, command failures, timeouts and shutdown.
+
 ## [1.0.11] - 2026-10-24
 
 ### Added
@@ -75,3 +87,4 @@
 
 ### Changed
 - Updated compatibility metadata for Homebridge 2.x.
+

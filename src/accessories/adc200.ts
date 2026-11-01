@@ -62,10 +62,10 @@ export function setupAdc200Accessory(
       const commandTopic =
         `${platform.config.commandPrefix || 'bewave/command'}/devices/${index}/rx`;
 
-      platform.mqttClient?.publish(
-        commandTopic,
-        JSON.stringify({ on_off: value ? 1 : 0 }),
-      );
+      await platform.sendCommand(
+          commandTopic,
+          { on_off: value ? 1 : 0 },
+        );
     });
 
   service
@@ -79,11 +79,12 @@ export function setupAdc200Accessory(
 	  `${name} -> helderheid ${brightness}% via MQTT`,
 	);
 
-      platform.mqttClient?.publish(
-        commandTopic,
-        JSON.stringify({
+      await platform.sendCommand(
+          commandTopic,
+          {
           color_brightening_value: brightness,
-        }),
-      );
+        },
+        );
     });
 }
+

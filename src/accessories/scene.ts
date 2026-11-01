@@ -74,14 +74,14 @@ informationService
 
     switchService
       .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(value => {
+      .onSet(async value => {
         if (!value) {
           return;
         }
 
-        platform.mqttClient?.publish(
+        await platform.sendCommand(
           commandTopic,
-          JSON.stringify({ action: 'START' }),
+          { action: 'START' },
         );
 
         platform.log.info(
@@ -97,3 +97,4 @@ informationService
       });
   }
 }
+

@@ -50,12 +50,13 @@ service
       `${name} -> ${value ? 'AAN' : 'UIT'} via MQTT`,
     );
 
-    platform.mqttClient?.publish(
-      topic,
-      JSON.stringify({
+    await platform.sendCommand(
+          topic,
+          {
         on_off: value ? 1 : 0,
-      }),
-    );
+      },
+        );
   });
   
 }
+
