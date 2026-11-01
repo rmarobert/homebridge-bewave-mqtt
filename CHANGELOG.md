@@ -3,6 +3,7 @@
 ## [1.0.12] - Unreleased
 
 ### Fixed
+- Update the locked transitive ip-address dependency from 10.7.3 to 10.7.5 to resolve GHSA-rxp7-6hxx-x8q5. A clean npm install audits with zero reported vulnerabilities.
 - Immediately restore the previous alarm mapping after duplicate or undiscovered group selections, and after configuration update failures. Show a clear error instead of leaving an unsaved selection visible next to the global SAVE button.
 - Ignore retained alarm snapshots when validating current alarm state.
 - Probe the BE WAVE Hybrid every 60 seconds using SYNC; require a live hub reply within 15 seconds. Mark alarm status unavailable and invalidate groups when the hub stops responding, even while the broker remains online.
