@@ -67,6 +67,7 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
   public readonly boundScenes = new Set<string>();
   public readonly alarm = new BeWaveAlarm(this);
   private mqttSession = 0;
+  private subscriptionRetry?: ReturnType<typeof setTimeout>;
   public readonly hubMonitor = new HubMonitor(
     () => this.requestSync(),
     online => {
@@ -92,6 +93,7 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
     });
     this.api.on('shutdown', () => {
       this.mqttSession++;
+      this.clearSubscriptionRetry();
       this.hubMonitor.stop();
       this.mqttClient?.end(true);
     });
@@ -352,40 +354,57 @@ if (type === 'VIRTUAL_IP_DEVICE') {
       username: this.config.username,
       password: this.config.password,
       queueQoSZero: false,
+      // Subscriptions are managed explicitly for each new MQTT connection.
+      resubscribe: false,
     });
+
+    const topics = [
+      `${statusPrefix}/system/tx`,
+      `${statusPrefix}/devices/+/tx`,
+      `${statusPrefix}/alarms/+/tx`,
+      `${statusPrefix}/scenes/+/tx`,
+    ];
+
+    const subscribeForSession = (session: number, attempt: number): void => {
+      const client = this.mqttClient;
+      if (session !== this.mqttSession || !client?.connected) return;
+
+      client.subscribe(topics, { qos: 0 }, (err, granted) => {
+        if (session !== this.mqttSession || !client.connected) return;
+
+        const accepted = new Set(
+          (granted ?? []).filter(item => item.qos !== 128).map(item => item.topic),
+        );
+        const missing = topics.filter(topic => !accepted.has(topic));
+        if (err || missing.length > 0) {
+          this.log.warn(
+            `MQTT subscriptions poging ${attempt} mislukt: ${err?.message ?? 'onvolledig'}; ` +
+            `ontbrekend/geweigerd: ${missing.join(', ') || 'geen'}; ` +
+            `bevestigd: ${JSON.stringify(granted ?? [])}`,
+          );
+          this.clearSubscriptionRetry();
+          this.subscriptionRetry = setTimeout(() => {
+            this.subscriptionRetry = undefined;
+            subscribeForSession(session, attempt + 1);
+          }, 3000);
+          return;
+        }
+
+        this.clearSubscriptionRetry();
+        this.log.info('MQTT status topics geactiveerd');
+        this.hubMonitor.start();
+      });
+    };
 
     this.mqttClient.on('connect', () => {
       const session = ++this.mqttSession;
+      this.clearSubscriptionRetry();
       this.hubMonitor.stop();
       // Oude alarmstatussen pas vertrouwen na nieuwe MQTT-berichten.
       this.alarm.invalidateStatus();
       this.log.info('MQTT verbonden');
-
-      const topics = [
-        `${statusPrefix}/system/tx`,
-        `${statusPrefix}/devices/+/tx`,
-        `${statusPrefix}/alarms/+/tx`,
-        `${statusPrefix}/scenes/+/tx`,
-      ];
-
-      // Eerst alle MQTT-abonnementen bevestigen.
-      this.mqttClient?.subscribe(topics, { qos: 0 }, (err, granted) => {
-        if (session !== this.mqttSession || !this.mqttClient?.connected) return;
-        if (err || !granted ||
-            granted.length !== topics.length ||
-            granted.some(item => item.qos === 128)) {
-          this.log.error(
-            `MQTT subscriptions mislukt: ${err?.message ?? 'onvolledig'}`,
-          );
-          return;
-        }
-
-        this.log.info('MQTT status topics geactiveerd');
-
-        this.hubMonitor.start();
-      });
+      subscribeForSession(session, 1);
     });
-
 
 this.mqttClient.on('message', (topic, payload, packet) => {
   const message = payload.toString();
@@ -442,6 +461,7 @@ this.mqttClient.on('message', (topic, payload, packet) => {
 
     this.mqttClient.on('offline', () => {
       this.mqttSession++;
+      this.clearSubscriptionRetry();
       this.hubMonitor.stop();
       this.log.warn('MQTT verbinding verloren');
       this.alarm.invalidateStatus();
@@ -453,6 +473,7 @@ this.mqttClient.on('message', (topic, payload, packet) => {
 
     this.mqttClient.on('close', () => {
       this.mqttSession++;
+      this.clearSubscriptionRetry();
       this.hubMonitor.stop();
       this.log.warn('MQTT verbinding gesloten');
       this.alarm.invalidateStatus();
@@ -462,6 +483,13 @@ this.mqttClient.on('message', (topic, payload, packet) => {
       this.log.error(`MQTT fout: ${error.message}`);
     });
 }  
+
+private clearSubscriptionRetry(): void {
+  if (this.subscriptionRetry) {
+    clearTimeout(this.subscriptionRetry);
+    this.subscriptionRetry = undefined;
+  }
+}
 
 private handleDeviceMessage(
   topic: string,
