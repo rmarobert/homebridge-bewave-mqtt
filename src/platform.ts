@@ -29,6 +29,7 @@ import { setupAsd200Accessory } from './accessories/asd200';
 import { setupVirtualOutputAccessory } from './accessories/virtualoutput';
 import { setupVirtualIpAccessory } from './accessories/virtualip';
 import { updateDeviceInformation } from './accessories/deviceinfo';
+import { setupGenericSensorAccessory } from './accessories/generic-sensor';
 
 // ================================
 // Importeer de scenes
@@ -174,6 +175,17 @@ private restoreCachedAccessories(): void {
       );
 
       this.api.updatePlatformAccessories([accessory]);
+    }
+
+    // Restore fallback services for models without a dedicated adapter.
+    const dedicatedTypes = new Set([
+      'ADC_200', 'ASW_210', 'APD_200', 'APCAM_200', 'ATPH_200',
+      'AXD_200L', 'AXD_200', 'SLIM_PIR_LUNA_PET_BUS', 'ART_210',
+      'ACMD_200', 'ASW_200_E', 'ASD_200', 'VIRTUAL_OUTPUT_DEVICE',
+      'VIRTUAL_IP_DEVICE',
+    ]);
+    if (!dedicatedTypes.has(type)) {
+      setupGenericSensorAccessory(this, index, accessory.displayName, {}, type);
     }
 
     if (type === 'ADC_200') {
@@ -585,6 +597,9 @@ private handleDeviceMessage(
   setupVirtualOutputAccessory(this, index, name, data);
   } else if (type === 'VIRTUAL_IP_DEVICE') {
   setupVirtualIpAccessory(this, index, name, data);
+  } else {
+    // Device model not yet implemented: expose only observed sensor fields.
+    setupGenericSensorAccessory(this, index, name, data, type);
   }
 
 const accessory = this.deviceAccessories.get(index);
