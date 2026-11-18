@@ -30,14 +30,8 @@ export function setupShutterAccessory(
       service.updateCharacteristic(Characteristic.TargetPosition, position);
     }
   }
-  if ('shutter_operation_pending' in data) {
-    service.updateCharacteristic(
-      Characteristic.PositionState,
-      Number(data.shutter_operation_pending) === 1
-        ? Characteristic.PositionState.STOPPED
-        : Characteristic.PositionState.STOPPED,
-    );
-  }
+  // The protocol does not publish movement direction. Do not fabricate it.
+  service.updateCharacteristic(Characteristic.PositionState, Characteristic.PositionState.STOPPED);
   if ('shutter_inclination_value' in data) {
     const inclination = Number(data.shutter_inclination_value);
     if (Number.isFinite(inclination) && inclination >= 0 && inclination <= 100) {
