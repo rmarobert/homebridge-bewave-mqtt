@@ -28,7 +28,7 @@ export function setupGenericSensorAccessory(
     platform.accessories.find(a => a.UUID === uuid);
 
   // Never expose an unknown device as an empty accessory.
-  if (!accessory && !definitions.some(def => Object.hasOwn(data, def.key))) {
+  if (!accessory && !definitions.some(def => Object.prototype.hasOwnProperty.call(data, def.key))) {
     return;
   }
 
@@ -48,7 +48,7 @@ export function setupGenericSensorAccessory(
   for (const def of definitions) {
     // Restore existing services even before receiving the first fresh state.
     const existing = accessory.getServiceById(def.service, def.subtype);
-    if (!existing && !Object.hasOwn(data, def.key)) continue;
+    if (!existing && !Object.prototype.hasOwnProperty.call(data, def.key)) continue;
 
     const service = existing ??
       accessory.addService(def.service, `${name} ${def.subtype}`, def.subtype);
@@ -58,7 +58,7 @@ export function setupGenericSensorAccessory(
       primaryAssigned = true;
     }
 
-    if (!Object.hasOwn(data, def.key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(data, def.key)) continue;
     const value = Number(data[def.key]);
     if (!Number.isFinite(value)) continue;
 
