@@ -9,6 +9,7 @@ import {
 import mqtt, { MqttClient } from 'mqtt';
 import { HubMonitor } from './hub-monitor';
 import { publishCommand } from './publish-command';
+import { TroubleMonitor } from './trouble-monitor';
 
 // ================================
 // Importeer alle devices 
@@ -29,6 +30,9 @@ import { setupAsd200Accessory } from './accessories/asd200';
 import { setupVirtualOutputAccessory } from './accessories/virtualoutput';
 import { setupVirtualIpAccessory } from './accessories/virtualip';
 import { updateDeviceInformation } from './accessories/deviceinfo';
+import { setupGenericSensorAccessory } from './accessories/generic-sensor';
+import { setupShutterAccessory } from './accessories/shutter';
+import { setupLightingAccessory } from './accessories/lighting';
 
 // ================================
 // Importeer de scenes
@@ -66,6 +70,7 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
   public readonly sceneAccessories = new Map<string, PlatformAccessory>();
   public readonly boundScenes = new Set<string>();
   public readonly alarm = new BeWaveAlarm(this);
+  public readonly troubleMonitor = new TroubleMonitor(this);
   private mqttSession = 0;
   private subscriptionRetry?: ReturnType<typeof setTimeout>;
   public readonly hubMonitor = new HubMonitor(
@@ -74,9 +79,11 @@ export class BeWaveMqttPlatform implements DynamicPlatformPlugin {
       if (!online) {
         this.log.warn('BE WAVE centrale niet bereikbaar; alarmstatus ongeldig');
         this.alarm.invalidateStatus();
+        this.troubleMonitor.reset();
       } else {
         this.log.info('BE WAVE centrale bereikbaar');
         this.alarm.refreshStatus();
+        this.troubleMonitor.refreshFaults();
       }
     },
   );
@@ -174,6 +181,24 @@ private restoreCachedAccessories(): void {
       );
 
       this.api.updatePlatformAccessories([accessory]);
+    }
+
+    // Restore fallback services for models without a dedicated adapter.
+    const dedicatedTypes = new Set([
+      'ADC_200', 'ASW_210', 'APD_200', 'APCAM_200', 'ATPH_200',
+      'AXD_200L', 'AXD_200', 'SLIM_PIR_LUNA_PET_BUS', 'ART_210',
+      'ACMD_200', 'ASW_200_E', 'ASD_200', 'VIRTUAL_OUTPUT_DEVICE',
+      'VIRTUAL_IP_DEVICE',
+    ]);
+    if (!dedicatedTypes.has(type)) {
+      // Use existing service types to restore their writable handlers.
+      if (accessory.getService(this.api.hap.Service.WindowCovering)) {
+        setupShutterAccessory(this, index, accessory.displayName, {}, type);
+      } else if (accessory.getService(this.api.hap.Service.Lightbulb)) {
+        setupLightingAccessory(this, index, accessory.displayName, {}, type);
+      } else {
+        setupGenericSensorAccessory(this, index, accessory.displayName, {}, type);
+      }
     }
 
     if (type === 'ADC_200') {
@@ -363,6 +388,8 @@ if (type === 'VIRTUAL_IP_DEVICE') {
       `${statusPrefix}/devices/+/tx`,
       `${statusPrefix}/alarms/+/tx`,
       `${statusPrefix}/scenes/+/tx`,
+      `${statusPrefix}/system/faults/tx`,
+      `${statusPrefix}/devices/+/faults/tx`,
     ];
 
     const subscribeForSession = (session: number, attempt: number): void => {
@@ -402,6 +429,7 @@ if (type === 'VIRTUAL_IP_DEVICE') {
       this.hubMonitor.stop();
       // Oude alarmstatussen pas vertrouwen na nieuwe MQTT-berichten.
       this.alarm.invalidateStatus();
+      this.troubleMonitor.reset();
       this.log.info('MQTT verbonden');
       subscribeForSession(session, 1);
     });
@@ -419,6 +447,12 @@ this.mqttClient.on('message', (topic, payload, packet) => {
 
     if (topic === `${statusPrefix}/system/tx`) {
       this.hubMonitor.receive(data, packet.retain);
+      this.troubleMonitor.processHub(data, packet.retain);
+      return;
+    }
+
+    if (topic.endsWith('/faults/tx')) {
+      if (!packet.retain) this.troubleMonitor.processFaultText(topic, data);
       return;
     }
 
@@ -452,6 +486,8 @@ this.mqttClient.on('message', (topic, payload, packet) => {
     }
 
     if (topic.includes('/devices/')) {
+      const deviceMatch = topic.match(/\/devices\/(\d+)\/tx$/);
+      if (deviceMatch) this.troubleMonitor.processDevice(deviceMatch[1], data, packet.retain);
       this.handleDeviceMessage(topic, data);
     }
   } catch {
@@ -465,6 +501,7 @@ this.mqttClient.on('message', (topic, payload, packet) => {
       this.hubMonitor.stop();
       this.log.warn('MQTT verbinding verloren');
       this.alarm.invalidateStatus();
+      this.troubleMonitor.reset();
     });
 
     this.mqttClient.on('reconnect', () => {
@@ -585,11 +622,22 @@ private handleDeviceMessage(
   setupVirtualOutputAccessory(this, index, name, data);
   } else if (type === 'VIRTUAL_IP_DEVICE') {
   setupVirtualIpAccessory(this, index, name, data);
+  } else {
+    // Use published capabilities instead of inventing a device model mapping.
+    const role = String(data.mode_of_work ?? '');
+    if ('shutter_value' in data && role !== 'BLIND') {
+      setupShutterAccessory(this, index, name, data, type);
+    } else if (role.startsWith('COLOR_') && ('on_off' in data || 'color_control' in data)) {
+      setupLightingAccessory(this, index, name, data, type);
+    } else {
+      setupGenericSensorAccessory(this, index, name, data, type);
+    }
   }
 
 const accessory = this.deviceAccessories.get(index);
 
 if (accessory) {
+  this.troubleMonitor.refreshFaults();
   updateDeviceInformation(
     this,
     accessory,

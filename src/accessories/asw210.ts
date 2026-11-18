@@ -1,4 +1,3 @@
-import { PlatformAccessory } from 'homebridge';
 import { BeWaveMqttPlatform } from '../platform';
 import { PLUGIN_NAME, PLATFORM_NAME } from '../settings';
 
@@ -35,28 +34,23 @@ export function setupAsw210Accessory(
     accessory.getService(platform.api.hap.Service.Switch) ||
     accessory.addService(platform.api.hap.Service.Switch);
 
-  service.updateCharacteristic(
-    platform.api.hap.Characteristic.On,
-    Boolean(data.on_off),
-  );
-
-service
-  .getCharacteristic(platform.api.hap.Characteristic.On)
-  .onSet(async value => {
-    const topic =
-      `${platform.config.commandPrefix ?? 'bewave/command'}/devices/${index}/rx`;
-
-    platform.log.info(
-      `${name} -> ${value ? 'AAN' : 'UIT'} via MQTT`,
+  if ('on_off' in data) {
+    service.updateCharacteristic(
+      platform.api.hap.Characteristic.On,
+      Number(data.on_off) === 1,
     );
+  }
 
-    await platform.sendCommand(
-          topic,
-          {
-        on_off: value ? 1 : 0,
-      },
-        );
-  });
-  
+  // MQTT state frames may arrive many times; bind HomeKit only once.
+  if (!platform.boundDevices.has(index)) {
+    platform.boundDevices.add(index);
+    service.getCharacteristic(platform.api.hap.Characteristic.On)
+      .onSet(async value => {
+        const topic =
+          `${platform.config.commandPrefix ?? 'bewave/command'}/devices/${index}/rx`;
+        await platform.sendCommand(topic, { on_off: value ? 1 : 0 });
+      });
+  }
+
 }
 

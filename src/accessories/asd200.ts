@@ -50,14 +50,6 @@ export function setupAsd200Accessory(
       'temperature',
     );
 
-  const batteryService =
-    accessory.getService(platform.api.hap.Service.Battery) ||
-    accessory.addService(
-      platform.api.hap.Service.Battery,
-      `${name} batterij`,
-      'battery',
-    );
-
   if ('smoke' in data) {
     smokeService.updateCharacteristic(
       platform.api.hap.Characteristic.SmokeDetected,
@@ -75,21 +67,12 @@ export function setupAsd200Accessory(
   }
 
   if ('battery' in data) {
-    const battery = Number(data.battery);
-
-    batteryService.updateCharacteristic(
-      platform.api.hap.Characteristic.BatteryLevel,
-      battery,
-    );
-
-    batteryService.updateCharacteristic(
-      platform.api.hap.Characteristic.StatusLowBattery,
-      battery <= 20
-        ? platform.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW
-        : platform.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
-    );
-
-    accessory.context.battery = battery;
+    // SATEL supplies millivolts, not HomeKit battery percentage.
+    // Preserve the raw reading for diagnostics without guessing the charge.
+    const batteryMillivolts = Number(data.battery);
+    if (Number.isFinite(batteryMillivolts)) {
+      accessory.context.batteryMillivolts = batteryMillivolts;
+    }
   }
 
   if ('signal' in data) {
