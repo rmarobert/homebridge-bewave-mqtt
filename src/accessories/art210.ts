@@ -57,20 +57,13 @@ boostService
   .getCharacteristic(platform.api.hap.Characteristic.ConfiguredName)
   .updateValue('Boost');
 
-const parentalControlService =
-  accessory.getServiceById(
-    platform.api.hap.Service.Switch,
-    'parental-control',
-  ) ||
-  accessory.addService(
-    platform.api.hap.Service.Switch,
-    `${name} Kinderslot`,
-    'parental-control',
+// The SATEL protocol exposes heater_parental_control as read-only.
+  // Remove the old writable HomeKit switch; the state remains in context.
+  const obsoleteChildLock = accessory.getServiceById(
+    platform.api.hap.Service.Switch, 'parental-control',
   );
+  if (obsoleteChildLock) accessory.removeService(obsoleteChildLock);
 
-parentalControlService
-  .getCharacteristic(platform.api.hap.Characteristic.ConfiguredName)
-  .updateValue('Kinderslot');
   // ART-210 kan alleen verwarmen.
   thermostatService
     .getCharacteristic(
@@ -179,12 +172,9 @@ parentalControlService
       Number(data.heater_boost_time);
   }
 
-  // Kinderslot
+  // SATEL reports this state but does not allow MQTT writes.
   if ('heater_parental_control' in data) {
-    parentalControlService.updateCharacteristic(
-      platform.api.hap.Characteristic.On,
-      Number(data.heater_parental_control) === 1,
-    );
+    accessory.context.parentalControl = Number(data.heater_parental_control) === 1;
   }
 
   if (!platform.boundDevices.has(index)) {
@@ -229,21 +219,7 @@ parentalControlService
         );
       });
 
-    // Kinderslot aan/uit
-    parentalControlService
-      .getCharacteristic(platform.api.hap.Characteristic.On)
-      .onSet(async value => {
-        await platform.sendCommand(
-          commandTopic,
-          {
-            heater_parental_control: value ? 1 : 0,
-          },
-        );
 
-        platform.log.info(
-          `${name} Kinderslot -> ${value ? 'AAN' : 'UIT'} via MQTT`,
-        );
-      });
   }
 }
 
