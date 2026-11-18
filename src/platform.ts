@@ -30,6 +30,8 @@ import { setupVirtualOutputAccessory } from './accessories/virtualoutput';
 import { setupVirtualIpAccessory } from './accessories/virtualip';
 import { updateDeviceInformation } from './accessories/deviceinfo';
 import { setupGenericSensorAccessory } from './accessories/generic-sensor';
+import { setupShutterAccessory } from './accessories/shutter';
+import { setupLightingAccessory } from './accessories/lighting';
 
 // ================================
 // Importeer de scenes
@@ -185,7 +187,14 @@ private restoreCachedAccessories(): void {
       'VIRTUAL_IP_DEVICE',
     ]);
     if (!dedicatedTypes.has(type)) {
-      setupGenericSensorAccessory(this, index, accessory.displayName, {}, type);
+      // Use existing service types to restore their writable handlers.
+      if (accessory.getService(this.api.hap.Service.WindowCovering)) {
+        setupShutterAccessory(this, index, accessory.displayName, {}, type);
+      } else if (accessory.getService(this.api.hap.Service.Lightbulb)) {
+        setupLightingAccessory(this, index, accessory.displayName, {}, type);
+      } else {
+        setupGenericSensorAccessory(this, index, accessory.displayName, {}, type);
+      }
     }
 
     if (type === 'ADC_200') {
@@ -598,8 +607,15 @@ private handleDeviceMessage(
   } else if (type === 'VIRTUAL_IP_DEVICE') {
   setupVirtualIpAccessory(this, index, name, data);
   } else {
-    // Device model not yet implemented: expose only observed sensor fields.
-    setupGenericSensorAccessory(this, index, name, data, type);
+    // Use published capabilities instead of inventing a device model mapping.
+    const role = String(data.mode_of_work ?? '');
+    if ('shutter_value' in data && role !== 'BLIND') {
+      setupShutterAccessory(this, index, name, data, type);
+    } else if (role.startsWith('COLOR_') && ('on_off' in data || 'color_control' in data)) {
+      setupLightingAccessory(this, index, name, data, type);
+    } else {
+      setupGenericSensorAccessory(this, index, name, data, type);
+    }
   }
 
 const accessory = this.deviceAccessories.get(index);
